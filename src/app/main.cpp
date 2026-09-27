@@ -229,8 +229,6 @@ bool webReady = false;
 bool alreadyRunningNoticePending = false;
 std::wstring latestStatus;
 std::atomic<bool> previewMode{false};
-std::atomic<bool> steamSharedMode{false};
-std::atomic<bool> controllerShared{false};
 size_t selectedPreset = 0;
 int editedLayer = 0;
 bool pendingRoleLayer = false;
@@ -407,8 +405,6 @@ bool SendKey(uint32_t key, bool down) {
 }
 
 void SetStatus(const wchar_t* value) {
-    if (controllerShared.load() && wcscmp(value, L"ボタン入力を検出：設定した入力をWindowsに送信しました") == 0)
-        value = L"共有アクセス中：Steamなどの入力が重複する可能性があります";
     if (mainWindow) PostMessageW(mainWindow, WM_CONTROLLER_STATUS, 0,
                                  reinterpret_cast<LPARAM>(value));
 }
@@ -879,11 +875,7 @@ void ControllerLoop() {
                 continue;
             }
             if (!ShouldHoldController()) { controller.Close(); continue; }
-            const auto claim = controller.ClaimGameModeAccess();
-            const bool allowShared = steamSharedMode.load() && autoMode.load() &&
-                IsTargetForeground() && !previewMode.load();
-            if (claim == SteamController::AccessClaim::Failed ||
-                (claim == SteamController::AccessClaim::Shared && !allowShared)) {
+            if (controller.ClaimGameModeAccess() != SteamController::AccessClaim::Exclusive) {
                 SetStatus(L"取得できません：Steamなどが使用中です");
                 controller.Close();
                 std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -896,10 +888,7 @@ void ControllerLoop() {
                 std::this_thread::sleep_for(std::chrono::seconds(1));
                 continue;
             }
-            const bool shared = claim == SteamController::AccessClaim::Shared;
-            controllerShared = shared;
-            SetStatus(shared ? L"共有アクセス中：Steamなどの入力が重複する可能性があります" :
-                previewMode.load() && GetForegroundWindow() == mainWindow ?
+            SetStatus(previewMode.load() && GetForegroundWindow() == mainWindow ?
                 L"入力確認中：ボタンを押してください" :
                 (autoMode ? L"自動有効：対象アプリへ入力します" :
                             L"有効：ボタン入力待ちです"));
@@ -918,9 +907,7 @@ void ControllerLoop() {
             auto lastReport = Clock::now();
             auto lastKeepalive = lastReport;
             bool healthy = true;
-            while (running && ShouldHoldController() && healthy &&
-                   (!shared || (steamSharedMode.load() && autoMode.load() &&
-                                IsTargetForeground() && !previewMode.load()))) {
+            while (running && ShouldHoldController() && healthy) {
                 const auto now = Clock::now();
                 if (now - lastKeepalive >= std::chrono::seconds(2)) {
                     healthy = controller.SendKeepalive();
@@ -1021,7 +1008,6 @@ void ControllerLoop() {
             sequenceStates = {};
             controller.EnableLizardMode();
             controller.Close();
-            controllerShared = false;
             if (mainWindow) PostMessageW(mainWindow, WM_CONTROLLER_INPUT, 0, 0);
             if (mainWindow) { PostMessageW(mainWindow, WM_STICK_INPUT, 0, 0); PostMessageW(mainWindow, WM_STICK_INPUT, 1, 0); }
             if (ShouldHoldController() && running)
@@ -1031,7 +1017,6 @@ void ControllerLoop() {
         ReleaseAll(held, active);
         if (controller.IsOpen()) controller.EmergencyLizardRestore();
         controller.Close();
-        controllerShared = false;
         SetStatus(L"予期しないエラー：アプリを再起動してください");
         requested = false;
     }

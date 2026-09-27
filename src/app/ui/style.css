@@ -112,8 +112,6 @@ h3 { margin: 17px 0 8px; font-size: 14px; }
 .header-actions { gap: 7px; flex-wrap: nowrap; }
 .connection { display: inline-flex; align-items: center; gap: 6px; max-width: 132px; padding: 0 11px 0 0; overflow: hidden; text-overflow: ellipsis; color: #c4d2c6; background: none; border-right: 1px solid #4b4354; border-radius: 0; font-size: 11px; }
 .connection::before { content: ''; display: inline-block; flex: 0 0 7px; width: 7px; height: 7px; border-radius: 50%; background: #86b993; }
-.connection.shared { color: #f0c98b; }
-.connection.shared::before { background: #e9aa60; }
 .app-header .secondary, .app-header .primary { min-height: 32px; padding: 5px 10px; font-size: 12px; }
 .app-header .icon-button { min-height: 32px; min-width: 32px; }
 .layout { min-height: calc(100vh - 56px); }

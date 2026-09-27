@@ -53,7 +53,6 @@ std::wstring ConfigJson() {
     std::wstring output = L"{\n  \"formatVersion\": 1,\n  \"language\": " + ConfigQuote(language) +
         L",\n  \"closeBehavior\": " + std::to_wstring(closeBehavior) +
         L",\n  \"autoMode\": " + ConfigBool(autoMode.load()) +
-        L",\n  \"steamSharedMode\": " + ConfigBool(steamSharedMode.load()) +
         L",\n  \"selectedPreset\": " + std::to_wstring(selectedPreset) +
         L",\n  \"folders\": [";
     for (size_t index = 0; index < folders.size(); ++index) {
@@ -212,7 +211,6 @@ struct ConfigSnapshot {
     std::wstring language;
     uint32_t closeBehavior = 0;
     bool autoMode = false;
-    bool steamSharedMode = false;
     size_t selectedPreset = 0;
     std::vector<std::wstring> folders;
     std::vector<Preset> presets;
@@ -230,8 +228,6 @@ bool ReadConfig(const std::wstring& path, ConfigSnapshot& result) {
         !ConfigNumber(root, L"closeBehavior", result.closeBehavior, 2) ||
         !ConfigBoolean(root, L"autoMode", result.autoMode) ||
         !ConfigNumber(root, L"selectedPreset", selected, 99)) return false;
-    if (root.Get(L"steamSharedMode") &&
-        !ConfigBoolean(root, L"steamSharedMode", result.steamSharedMode)) return false;
     const auto* folderArray = ConfigField(root, L"folders", Type::Array);
     const auto* presetArray = ConfigField(root, L"presets", Type::Array);
     if (!folderArray || folderArray->array.size() > 100 || !presetArray ||
@@ -276,7 +272,6 @@ void ApplyConfig(ConfigSnapshot&& value) {
     language = std::move(value.language);
     closeBehavior = value.closeBehavior;
     autoMode = value.autoMode;
-    steamSharedMode = value.steamSharedMode;
     selectedPreset = value.selectedPreset;
     folders = std::move(value.folders);
     presets = std::move(value.presets);

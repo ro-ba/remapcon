@@ -47,9 +47,6 @@
       leftStick: '左スティック', rightStick: '右スティック', deadzone: 'デッドゾーン', overlap: '斜めの重なり幅',
       invalidStickSetting: '0〜32767の整数で入力してください。', noDirection: '入力なし',
       closeBehavior: '閉じるボタンの動作', closeAsk: '毎回確認', closeTray: 'トレイに格納',
-      steamCoexistenceTitle: 'Steamとの併用（試験的）',
-      steamCoexistenceOption: '対象アプリの前面表示中、Steamとの共有アクセスを試す',
-      steamCoexistenceHelp: '先にSteamのデスクトップレイアウトを「空」にしてください。設定が残ると二重入力やオンスクリーンキーボードが起きます。Steamゲームのレイアウトは別です。',
       closeExit: '終了', closeTitle: 'アプリを閉じる',
       closeExplanation: 'トレイに格納すると、アプリは動作を続けます。通知領域のアイコンから再表示・終了できます。',
       adminWarning: '管理者として実行されていません。ゲーム内で入力が効かない場合は、管理者としてアプリを再起動してください。',
@@ -111,9 +108,6 @@
       leftStick: 'Left stick', rightStick: 'Right stick', deadzone: 'Deadzone', overlap: 'Diagonal overlap',
       invalidStickSetting: 'Enter an integer from 0 to 32767.', noDirection: 'No input',
       closeBehavior: 'Close button action', closeAsk: 'Ask every time', closeTray: 'Minimize to tray',
-      steamCoexistenceTitle: 'Use alongside Steam (experimental)',
-      steamCoexistenceOption: 'Try shared access while the target app is in front',
-      steamCoexistenceHelp: 'First set Steam’s Desktop Layout to Empty. Otherwise Steam may send duplicate input or open its on-screen keyboard. Steam game layouts are separate.',
       closeExit: 'Exit', closeTitle: 'Close the app',
       closeExplanation: 'The app keeps running in the tray. Use its notification icon to reopen or exit.',
       adminWarning: 'This app is not running as administrator. If inputs do not work in your game, restart the app as administrator.',
@@ -221,7 +215,6 @@
     '自動待機中：対象アプリを前面にすると有効になります':'Waiting for the target app',
     'コントローラー待機中：接続を確認してください':'Waiting for the controller',
     '取得できません：Steamなどが使用中です':'Controller is in use by Steam or another app',
-    '共有アクセス中：Steamなどの入力が重複する可能性があります':'Shared access: Steam or another app may send duplicate input',
     'Lizard Modeを無効化できませんでした':'Could not disable Lizard Mode',
     '自動有効：対象アプリへ入力します':'Auto mode active in target app',
     '有効：ボタン入力待ちです':'Active: waiting for controller input',
@@ -232,20 +225,17 @@
     '入力送信に失敗：対象アプリの権限を確認してください':'Could not send input: check app permissions',
   };
   const statusText = value => lang() === 'en' ? (englishStatus[value] || value) : value;
-  const showSharedStatus = value => $('connection').classList.toggle('shared', value.startsWith('共有アクセス中'));
   const compactStatus = value => {
     const translated = statusText(value);
     const prefix = value.split('：')[0];
     const labels = lang() === 'en' ? {
       '停止中':'Stopped','自動待機中':'Auto standby','コントローラー待機中':'Waiting',
       '取得できません':'Unavailable','自動有効':'Auto active','有効':'Active',
-      '共有アクセス中':'Shared access',
       '入力確認中':'Input test','通信が切れました':'Disconnected',
       '入力送信に失敗':'Send failed','ボタン入力を検出':'Input sent'
     } : {
       '停止中':'停止中','自動待機中':'自動待機中','コントローラー待機中':'接続待ち',
       '取得できません':'取得不可','自動有効':'自動有効','有効':'有効',
-      '共有アクセス中':'共有中',
       '入力確認中':'入力確認中','通信が切れました':'切断',
       '入力送信に失敗':'送信失敗','ボタン入力を検出':'入力送信済み'
     };
@@ -641,9 +631,7 @@
     $('preview').classList.toggle('primary', state.preview);
     $('language').value = lang();
     $('close-behavior').value = String(state.closeBehavior ?? 0);
-    $('steam-shared-mode').checked = !!state.steamSharedMode;
     $('connection').textContent = compactStatus(state.status || tr('waiting'));
-    showSharedStatus(state.status || '');
     $('connection').title = statusText(state.status || tr('waiting'));
     $('status').textContent = statusText(state.status || '');
     document.body.classList.add('ui-ready');
@@ -826,7 +814,6 @@
   window.addEventListener('blur', clearHighlight);
   $('language').onchange = event => send('setLanguage', event.target.value);
   $('close-behavior').onchange = event => send('setCloseBehavior', event.target.value);
-  $('steam-shared-mode').onchange = event => send('setSteamSharedMode', event.target.checked ? 1 : 0);
   $('import').onclick = () => { $('import-dialog').hidden = false; $('import-confirm').focus(); };
   $('export').onclick = () => { close('settings'); send('export'); };
   document.querySelectorAll('[data-close]').forEach(button => button.onclick = () => close(button.dataset.close));
@@ -905,7 +892,7 @@
       updateTreeSelection(); renderDetails();
     }
     else if (message.type === 'window') { $('win-max').textContent = message.maximized ? '❐' : '□'; $('win-max').title = message.maximized ? '元のサイズに戻す' : '最大化'; }
-    else if (message.type === 'status') { $('status').textContent = statusText(message.text); $('connection').textContent = compactStatus(message.text); $('connection').title = statusText(message.text); showSharedStatus(message.text); }
+    else if (message.type === 'status') { $('status').textContent = statusText(message.text); $('connection').textContent = compactStatus(message.text); $('connection').title = statusText(message.text); }
     else if (message.type === 'stickInput' && !$('stick-dialog').hidden) {
       const side = message.side === 0 ? 'left' : 'right';
       stickPosition[side] = {x:message.x, y:message.y}; renderStick(side);
