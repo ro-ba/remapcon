@@ -4,6 +4,8 @@ This feature needs hardware testing. When Steam and Remapcon share the physical 
 
 ## Preparation
 
+Download the trial ZIP from **Remapcon-Windows-x64** on the GitHub Actions run page and extract it to a separate folder so the released build remains available. Settings are shared with the existing Remapcon installation on the same PC, so export them first if you want an easy backup.
+
 1. In Steam, open **Settings → Controller → Desktop Layout** and select an empty layout. If **Disable Steam Input** is offered for Desktop Layout, that is another option. Note the previous layout so you can restore it. Desktop Layout is separate from per-game layouts.
 2. If a Steam button chord opens the on-screen keyboard, review Steam's Guide Button Chord settings too. An empty Desktop Layout may not disable those chords.
 3. Leave Steam running and connect the controller. On the desktop, check that the buttons and pads no longer send unintended keys or mouse input.
