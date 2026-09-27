@@ -221,24 +221,25 @@ void NotifyFailure(HWND window, UpdateFailure reason) {
 }
 
 int VerifyArchive(const fs::path& archive, const std::string& expected) {
-    if (expected.size() != 64) return 1;
+    if (expected.size() != 64) return 2;
     std::error_code error;
     const auto size = fs::file_size(archive, error);
-    if (error || size == 0 || size > MaxPackage) return 1;
+    if (error || size == 0 || size > MaxPackage) return 2;
     std::vector<unsigned char> bytes(static_cast<size_t>(size));
     std::ifstream input(archive, std::ios::binary);
     if (!input.read(reinterpret_cast<char*>(bytes.data()),
-                    static_cast<std::streamsize>(bytes.size()))) return 1;
+                    static_cast<std::streamsize>(bytes.size()))) return 2;
     std::string actual;
-    if (!Sha256(bytes, actual) || actual != expected) return 1;
+    if (!Sha256(bytes, actual) || actual != expected) return 2;
     const fs::path destination = archive.parent_path() / L"remapcon-verify-extracted";
     fs::create_directories(destination, error);
-    if (error) return 1;
-    const bool okay = Extract(archive, destination) &&
+    if (error) return 3;
+    const bool extracted = Extract(archive, destination);
+    const bool okay = extracted &&
         fs::is_regular_file(destination / L"Remapcon-Windows-x64" / L"Remapcon.exe", error) &&
         fs::is_regular_file(destination / L"Remapcon-Windows-x64" / L"RemapconUpdater.exe", error);
     fs::remove_all(destination, error);
-    return okay ? 0 : 1;
+    return okay ? 0 : extracted ? 4 : 3;
 }
 
 } // namespace
