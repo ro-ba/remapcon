@@ -1,0 +1,14 @@
+build/
+.vs/
+*.user
+*.suo
+*.pdb
+*.ilk
+*.obj
+*.exe
+*.dll
+*.lib
+Output/
+
+# Local checkout of the upstream project; the standalone source lives at the repository root.
+upstream-source/

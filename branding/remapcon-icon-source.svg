@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Remapcon icon source</title>
+  <desc id="desc">A stylized game controller with two touchpad shapes.</desc>
+  <rect width="256" height="256" rx="56" fill="#292331"/>
+  <path d="M59 50h138c22 0 35 14 41 39l10 91c3 29-18 44-39 31l-30-20H77l-30 20c-21 13-42-2-39-31l10-91c6-25 19-39 41-39Z" fill="#443653" stroke="#A987D4" stroke-width="8" stroke-linejoin="round"/>
+  <circle cx="96" cy="91" r="18" fill="#221D2A" stroke="#8E76A8" stroke-width="5"/>
+  <circle cx="160" cy="91" r="18" fill="#221D2A" stroke="#8E76A8" stroke-width="5"/>
+  <path d="M47 86h25m-12-12v25" stroke="#D9C4ED" stroke-width="7" stroke-linecap="round"/>
+  <circle cx="200" cy="77" r="4" fill="#D9C4ED"/>
+  <circle cx="189" cy="88" r="4" fill="#D9C4ED"/>
+  <circle cx="211" cy="88" r="4" fill="#D9C4ED"/>
+  <circle cx="200" cy="99" r="4" fill="#D9C4ED"/>
+  <rect x="37" y="119" width="77" height="70" rx="15" fill="#C9A7EB"/>
+  <rect x="142" y="119" width="77" height="70" rx="15" fill="#C9A7EB"/>
+  <rect x="45" y="127" width="61" height="54" rx="10" fill="#80639F"/>
+  <rect x="150" y="127" width="61" height="54" rx="10" fill="#80639F"/>
+  <circle cx="128" cy="143" r="7" fill="#D9C4ED"/>
+</svg>
