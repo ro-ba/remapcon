@@ -737,16 +737,29 @@ struct PadMotionState {
     int16_t y = 0;
     float remainderX = 0;
     float remainderY = 0;
+    int hapticTravel = 0;
 
-    void Update(uint32_t mode, uint32_t sensitivity, bool contact,
+    bool Update(uint32_t mode, uint32_t sensitivity, bool contact,
                 int16_t nextX, int16_t nextY) {
-        if (mode != previousMode) { touching = false; remainderX = remainderY = 0; previousMode = mode; }
-        if (!mode || !contact) { touching = false; remainderX = remainderY = 0; return; }
+        if (mode != previousMode) {
+            touching = false; remainderX = remainderY = 0; hapticTravel = 0;
+            previousMode = mode;
+        }
+        if (!mode || !contact) {
+            touching = false; remainderX = remainderY = 0; hapticTravel = 0;
+            return false;
+        }
+        bool hapticTick = false;
         if (touching) {
             const int dx = static_cast<int>(nextX) - x;
             const int dy = static_cast<int>(y) - nextY;
             // A discontinuity can occur after a missed report; start a new gesture.
             if (std::abs(dx) < 12000 && std::abs(dy) < 12000) {
+                hapticTravel += std::abs(dx) + std::abs(dy);
+                if (hapticTravel >= 1800) {
+                    hapticTick = true;
+                    hapticTravel = 0;
+                }
                 if (mode == 1) {
                     const float scale = 0.01125f * static_cast<float>(sensitivity) / 100.0f;
                     const float px = dx * scale + remainderX;
@@ -786,9 +799,10 @@ struct PadMotionState {
                         SendInput(1, &input, sizeof(input));
                     }
                 }
-            }
+            } else hapticTravel = 0;
         }
         x = nextX; y = nextY; touching = true;
+        return hapticTick;
     }
 };
 
@@ -867,6 +881,7 @@ void ControllerLoop() {
             rightTap = {};
             leftStick = {}; rightStick = {};
             leftMotion = {}; rightMotion = {};
+            bool leftClickHaptic = false, rightClickHaptic = false;
             auto lastPreview = Clock::now();
             auto lastReport = Clock::now();
             auto lastKeepalive = lastReport;
@@ -905,13 +920,24 @@ void ControllerLoop() {
                             rightSensitivity = liveRightPadSensitivity;
                         }
                         const bool canMove = IsTargetForeground() && !previewMode.load();
-                        leftMotion.Update(canMove ? leftMode : 0, leftSensitivity,
+                        if (canMove && physical[LeftPadClick] && !leftClickHaptic)
+                            controller.PulseTrackpadHaptic(true, true);
+                        if (canMove && physical[RightPadClick] && !rightClickHaptic)
+                            controller.PulseTrackpadHaptic(false, true);
+                        leftClickHaptic = physical[LeftPadClick];
+                        rightClickHaptic = physical[RightPadClick];
+                        const bool leftTick = leftMotion.Update(canMove ? leftMode : 0, leftSensitivity,
                             (report[5] & SteamController::BTN_TP_LT) != 0,
                             ReadInt16(report + 18), ReadInt16(report + 20));
-                        rightMotion.Update(canMove ? rightMode : 0, rightSensitivity,
+                        const bool rightTick = rightMotion.Update(canMove ? rightMode : 0, rightSensitivity,
                             (report[4] & SteamController::BTN_TP_RT) != 0,
                             ReadInt16(report + 24), ReadInt16(report + 26));
-                    } else { leftMotion = {}; rightMotion = {}; }
+                        if (leftTick) controller.TickTrackpadMovement(true);
+                        if (rightTick) controller.TickTrackpadMovement(false);
+                    } else {
+                        leftMotion = {}; rightMotion = {};
+                        leftClickHaptic = rightClickHaptic = false;
+                    }
                 }
                 const auto inputNow = Clock::now();
                 if (inputNow - lastReport > std::chrono::milliseconds(500)) {
@@ -922,6 +948,7 @@ void ControllerLoop() {
                     rightTap = {};
                     leftStick = {}; rightStick = {};
                     leftMotion = {}; rightMotion = {};
+                    leftClickHaptic = rightClickHaptic = false;
                 } else {
                     physical[LeftPadTap] = leftTap.Pulsing(inputNow);
                     physical[RightPadTap] = rightTap.Pulsing(inputNow);
