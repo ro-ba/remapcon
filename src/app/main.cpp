@@ -473,10 +473,11 @@ bool TakeControllerFromSteam(SteamController& controller, const std::wstring& pa
             if (controller.WaitForStateReport(350)) { claimed = true; break; }
             controller.Close();
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
     }
     const bool cycled = FinishDeviceCycle(cycle, 6000);
-    if (!claimed || !cycled || !ShouldHoldController()) {
+    if (!claimed || !cycled || !running || !steamTakeover.load() ||
+        !autoMode.load() || !IsTargetForeground()) {
         controller.Close();
         return false;
     }
@@ -1037,7 +1038,8 @@ void ControllerLoop() {
             auto lastReport = Clock::now();
             auto lastKeepalive = lastReport;
             bool healthy = true;
-            while (running && ShouldHoldController() && healthy) {
+            while (running && ShouldHoldController() && healthy &&
+                   (!tookFromSteam || steamTakeover.load())) {
                 const auto now = Clock::now();
                 if (now - lastKeepalive >= std::chrono::seconds(2)) {
                     healthy = controller.SendKeepalive();
