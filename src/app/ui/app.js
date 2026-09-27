@@ -482,6 +482,9 @@
   function padModeName(mode) {
     return tr(mode === 1 ? 'padMouse' : mode === 2 ? 'padScroll' : 'padOff');
   }
+  function paintSensitivityRange(range) {
+    range.style.setProperty('--range-progress', ((Number(range.value) - 25) / 375 * 100) + '%');
+  }
   function openPadDialog() {
     $('left-pad-mode').value = String(current().leftPadMode);
     $('right-pad-mode').value = String(current().rightPadMode);
@@ -489,6 +492,8 @@
     $('right-pad-sensitivity').value = String(current().rightPadSensitivity || 100);
     $('left-pad-sensitivity-range').value = $('left-pad-sensitivity').value;
     $('right-pad-sensitivity-range').value = $('right-pad-sensitivity').value;
+    paintSensitivityRange($('left-pad-sensitivity-range'));
+    paintSensitivityRange($('right-pad-sensitivity-range'));
     $('pad-dialog').hidden = false; $('left-pad-mode').focus();
   }
   function renderRows() {
@@ -713,10 +718,13 @@
   for (const side of ['left','right']) {
     const range = $(`${side}-pad-sensitivity-range`);
     const number = $(`${side}-pad-sensitivity`);
-    range.oninput = () => { number.value = range.value; };
+    range.oninput = () => { number.value = range.value; paintSensitivityRange(range); };
     number.oninput = () => {
       const value = Number(number.value);
-      if (Number.isFinite(value)) range.value = String(Math.max(25, Math.min(400, value)));
+      if (number.value !== '' && Number.isFinite(value)) {
+        range.value = String(Math.max(25, Math.min(400, value)));
+        paintSensitivityRange(range);
+      }
     };
   }
   document.addEventListener('click', event => { if (!$('context-menu').contains(event.target)) hideContext(); });
