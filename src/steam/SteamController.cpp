@@ -128,6 +128,10 @@ bool SteamController::Open(const std::wstring& path) {
     return true;
 }
 
+bool SteamController::OpenExclusive(const std::wstring& path) {
+    return m_device.OpenExclusive(path);
+}
+
 bool SteamController::AdoptHandle(void* handle, const std::wstring& path) {
     return m_device.Adopt(static_cast<HANDLE>(handle), path);
 }

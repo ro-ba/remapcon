@@ -124,6 +124,15 @@ bool HidDevice::Open(const std::wstring& path) {
     return FinishOpen(path);
 }
 
+bool HidDevice::OpenExclusive(const std::wstring& path) {
+    Close();
+    m_handle = CreateFileW(path.c_str(), GENERIC_READ | GENERIC_WRITE,
+                           FILE_SHARE_READ, nullptr, OPEN_EXISTING,
+                           FILE_FLAG_OVERLAPPED, nullptr);
+    if (m_handle == INVALID_HANDLE_VALUE) return false;
+    return FinishOpen(path);
+}
+
 bool HidDevice::Adopt(HANDLE handle, const std::wstring& path) {
     if (handle == INVALID_HANDLE_VALUE) return false;
     Close();

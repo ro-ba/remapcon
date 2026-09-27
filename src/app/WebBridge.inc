@@ -90,6 +90,7 @@ void SendUiState() {
     json += L"],\"selectedPreset\":" + std::to_wstring(selectedPreset) +
         L",\"editedLayer\":" + std::to_wstring(editedLayer) +
         L",\"autoMode\":" + JsonBool(autoMode.load()) +
+        L",\"steamTakeover\":" + JsonBool(steamTakeover.load()) +
         L",\"requested\":" + JsonBool(requested.load()) +
         L",\"preview\":" + JsonBool(previewMode.load()) +
         L",\"elevated\":" + JsonBool(processElevated) +
@@ -256,6 +257,11 @@ void OnWebMessage(const std::wstring& raw) {
     } else if (command == L"setPreview") {
         previewMode = arg(1) == L"1";
         okay = true;
+    } else if (command == L"setSteamTakeover") {
+        const bool old = steamTakeover.load();
+        steamTakeover = arg(1) == L"1";
+        okay = SavePresets();
+        if (!okay) steamTakeover = old;
     } else if (command == L"setLanguage") {
         const auto old = language;
         language = arg(1) == L"en" ? L"en" : L"ja";

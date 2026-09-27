@@ -23,6 +23,7 @@ public:
     // Open with shared read/write access for idle tracking.
     // Returns false if device is not found.
     bool Open(const std::wstring& path);
+    bool OpenExclusive(const std::wstring& path);
     // Take ownership of a handle somebody else already opened, and finish the
     // setup Open() would have done. Exists so the pounce thread can win the
     // reopen race off the UI thread and hand the live handle over: reopening

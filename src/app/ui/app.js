@@ -47,6 +47,9 @@
       leftStick: '左スティック', rightStick: '右スティック', deadzone: 'デッドゾーン', overlap: '斜めの重なり幅',
       invalidStickSetting: '0〜32767の整数で入力してください。', noDirection: '入力なし',
       closeBehavior: '閉じるボタンの動作', closeAsk: '毎回確認', closeTray: 'トレイに格納',
+      steamTakeoverTitle: 'Steam起動中の切り替え（試験的）',
+      steamTakeoverOption: '対象アプリの前面でコントローラーを排他取得する',
+      steamTakeoverHelp: '管理者として起動したときだけ使用できます。切り替え時にWindowsがコントローラーを一度再認識します。SteamのDesktop Layoutは変更しません。',
       closeExit: '終了', closeTitle: 'アプリを閉じる',
       closeExplanation: 'トレイに格納すると、アプリは動作を続けます。通知領域のアイコンから再表示・終了できます。',
       adminWarning: '管理者として実行されていません。ゲーム内で入力が効かない場合は、管理者としてアプリを再起動してください。',
@@ -108,6 +111,9 @@
       leftStick: 'Left stick', rightStick: 'Right stick', deadzone: 'Deadzone', overlap: 'Diagonal overlap',
       invalidStickSetting: 'Enter an integer from 0 to 32767.', noDirection: 'No input',
       closeBehavior: 'Close button action', closeAsk: 'Ask every time', closeTray: 'Minimize to tray',
+      steamTakeoverTitle: 'Switch while Steam is running (experimental)',
+      steamTakeoverOption: 'Take exclusive control while the target app is in front',
+      steamTakeoverHelp: 'Requires running as administrator. Windows briefly reconnects the controller during each switch. Steam Desktop Layout is left unchanged.',
       closeExit: 'Exit', closeTitle: 'Close the app',
       closeExplanation: 'The app keeps running in the tray. Use its notification icon to reopen or exit.',
       adminWarning: 'This app is not running as administrator. If inputs do not work in your game, restart the app as administrator.',
@@ -631,6 +637,8 @@
     $('preview').classList.toggle('primary', state.preview);
     $('language').value = lang();
     $('close-behavior').value = String(state.closeBehavior ?? 0);
+    $('steam-takeover').checked = !!state.steamTakeover;
+    $('steam-takeover').disabled = !state.elevated;
     $('connection').textContent = compactStatus(state.status || tr('waiting'));
     $('connection').title = statusText(state.status || tr('waiting'));
     $('status').textContent = statusText(state.status || '');
@@ -814,6 +822,7 @@
   window.addEventListener('blur', clearHighlight);
   $('language').onchange = event => send('setLanguage', event.target.value);
   $('close-behavior').onchange = event => send('setCloseBehavior', event.target.value);
+  $('steam-takeover').onchange = event => send('setSteamTakeover', event.target.checked ? 1 : 0);
   $('import').onclick = () => { $('import-dialog').hidden = false; $('import-confirm').focus(); };
   $('export').onclick = () => { close('settings'); send('export'); };
   document.querySelectorAll('[data-close]').forEach(button => button.onclick = () => close(button.dataset.close));

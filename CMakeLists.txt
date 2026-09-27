@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(Remapcon VERSION 1.4.0 LANGUAGES CXX)
+project(Remapcon VERSION 1.5.0 LANGUAGES CXX)
 
 include(FetchContent)
 set(CMAKE_CXX_STANDARD 20)
@@ -48,6 +48,8 @@ add_executable(Remapcon WIN32
     src/app/WebBridge.inc
     src/app/UpdateProtocol.h
     src/app/TargetIcon.cpp
+    src/app/DeviceCycle.cpp
+    src/app/DeviceCycle.h
     src/app/WebUi.cpp
     src/app/resources/app.rc
 )
@@ -55,7 +57,7 @@ target_include_directories(Remapcon PRIVATE
     "${CMAKE_CURRENT_BINARY_DIR}"
     "${webview2_SOURCE_DIR}/build/native/include")
 target_link_libraries(Remapcon PRIVATE
-    SteamController user32 shell32 comdlg32 ole32 dwmapi advapi32 windowscodecs
+    SteamController user32 shell32 comdlg32 ole32 dwmapi advapi32 windowscodecs cfgmgr32
     "${webview2_SOURCE_DIR}/build/native/${WV2_ARCH}/WebView2LoaderStatic.lib")
 if(MSVC)
     target_compile_options(Remapcon PRIVATE /W4 /WX /utf-8)

@@ -161,6 +161,7 @@ public:
     bool Open();
     // Open a specific path returned by EnumerateAll (no probe needed).
     bool Open(const std::wstring& path);
+    bool OpenExclusive(const std::wstring& path);
     // Adopt a handle the pounce thread already opened exclusively.
     bool AdoptHandle(void* handle, const std::wstring& path);
     void Close();

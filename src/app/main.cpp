@@ -27,6 +27,7 @@
 #include "WebUi.h"
 #include "resources/resource.h"
 #include "UpdateProtocol.h"
+#include "DeviceCycle.h"
 
 namespace {
 
@@ -240,6 +241,7 @@ std::thread controllerThread;
 std::atomic<bool> running{true};
 std::atomic<bool> requested{false};
 std::atomic<bool> autoMode{false};
+std::atomic<bool> steamTakeover{false};
 size_t selectedButton = A;
 uint32_t pendingBinding = 0;
 TurboSettings pendingTurbo;
@@ -382,6 +384,109 @@ bool IsTargetForeground() {
 bool ShouldHoldController() {
     return requested.load() || (autoMode.load() && IsTargetForeground()) ||
         (previewMode.load() && GetForegroundWindow() == mainWindow);
+}
+
+struct DeviceCycleProcess {
+    HANDLE process = nullptr;
+    HANDLE downEvent = nullptr;
+    void Close() {
+        if (process) CloseHandle(process);
+        if (downEvent) CloseHandle(downEvent);
+        process = downEvent = nullptr;
+    }
+};
+
+std::wstring DeviceCycleExe() {
+    wchar_t executable[MAX_PATH * 2]{};
+    if (!GetModuleFileNameW(nullptr, executable, static_cast<DWORD>(std::size(executable))))
+        return {};
+    return executable;
+}
+
+bool RecoverInterruptedDeviceCycle() {
+    if (!processElevated) return true;
+    const std::wstring helper = DeviceCycleExe();
+    if (helper.empty() || GetFileAttributesW(helper.c_str()) == INVALID_FILE_ATTRIBUTES)
+        return true;
+    std::wstring command = L"\"" + helper + L"\" --recover-device-cycle";
+    STARTUPINFOW startup{sizeof(startup)};
+    PROCESS_INFORMATION process{};
+    startup.dwFlags = STARTF_USESHOWWINDOW;
+    startup.wShowWindow = SW_HIDE;
+    if (!CreateProcessW(helper.c_str(), command.data(), nullptr, nullptr, FALSE,
+                        CREATE_NO_WINDOW, nullptr, nullptr, &startup, &process)) return false;
+    CloseHandle(process.hThread);
+    const DWORD wait = WaitForSingleObject(process.hProcess, 12000);
+    DWORD code = 1;
+    if (wait == WAIT_OBJECT_0) GetExitCodeProcess(process.hProcess, &code);
+    CloseHandle(process.hProcess);
+    return wait == WAIT_OBJECT_0 && code == 0;
+}
+
+bool StartDeviceCycle(const std::wstring& path, DeviceCycleProcess& cycle) {
+    if (!processElevated || path.empty() || path.find(L'"') != std::wstring::npos)
+        return false;
+    const std::wstring helper = DeviceCycleExe();
+    if (helper.empty() || GetFileAttributesW(helper.c_str()) == INVALID_FILE_ATTRIBUTES)
+        return false;
+    SECURITY_ATTRIBUTES security{sizeof(security), nullptr, TRUE};
+    cycle.downEvent = CreateEventW(&security, TRUE, FALSE, nullptr);
+    if (!cycle.downEvent) return false;
+    std::wstring command = L"\"" + helper + L"\" --device-cycle \"" + path +
+        L"\" " + std::to_wstring(reinterpret_cast<ULONG_PTR>(cycle.downEvent));
+    STARTUPINFOW startup{sizeof(startup)};
+    PROCESS_INFORMATION process{};
+    startup.dwFlags = STARTF_USESHOWWINDOW;
+    startup.wShowWindow = SW_HIDE;
+    if (!CreateProcessW(helper.c_str(), command.data(), nullptr, nullptr, TRUE,
+                        CREATE_NO_WINDOW, nullptr, nullptr, &startup, &process)) {
+        cycle.Close();
+        return false;
+    }
+    CloseHandle(process.hThread);
+    cycle.process = process.hProcess;
+    return true;
+}
+
+bool FinishDeviceCycle(DeviceCycleProcess& cycle, DWORD timeoutMs) {
+    const DWORD wait = WaitForSingleObject(cycle.process, timeoutMs);
+    DWORD code = 1;
+    if (wait == WAIT_OBJECT_0) GetExitCodeProcess(cycle.process, &code);
+    cycle.Close();
+    return wait == WAIT_OBJECT_0 && code == 0;
+}
+
+bool TakeControllerFromSteam(SteamController& controller, const std::wstring& path) {
+    DeviceCycleProcess cycle;
+    if (!StartDeviceCycle(path, cycle)) return false;
+    HANDLE waitHandles[] = {cycle.downEvent, cycle.process};
+    const DWORD down = WaitForMultipleObjects(2, waitHandles, FALSE, 6000);
+    if (down != WAIT_OBJECT_0) {
+        FinishDeviceCycle(cycle, 6000);
+        return false;
+    }
+    const auto deadline = Clock::now() + std::chrono::seconds(8);
+    bool claimed = false;
+    while (running && ShouldHoldController() && steamTakeover.load() &&
+           Clock::now() < deadline) {
+        if (controller.OpenExclusive(path)) {
+            if (controller.WaitForStateReport(350)) { claimed = true; break; }
+            controller.Close();
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+    const bool cycled = FinishDeviceCycle(cycle, 6000);
+    if (!claimed || !cycled || !ShouldHoldController()) {
+        controller.Close();
+        return false;
+    }
+    return true;
+}
+
+bool ReturnControllerToSteam(const std::wstring& path) {
+    DeviceCycleProcess cycle;
+    if (!StartDeviceCycle(path, cycle)) return false;
+    return FinishDeviceCycle(cycle, 12000);
 }
 
 bool SendKey(uint32_t key, bool down) {
@@ -848,6 +953,7 @@ void ControllerLoop() {
     try {
         bool announcedStopped = false;
         bool lastIdleWasAuto = false;
+        Clock::time_point retryTakeoverAfter{};
         while (running) {
             if (!ShouldHoldController()) {
                 const bool idleAuto = autoMode.load();
@@ -862,10 +968,16 @@ void ControllerLoop() {
             }
             announcedStopped = false;
             bool opened = false;
+            bool tookFromSteam = false;
+            std::wstring controllerPath;
             for (const auto& path : SteamController::EnumerateAll()) {
                 if (!running || !ShouldHoldController()) break;
                 if (!controller.Open(path)) continue;
-                if (controller.WaitForStateReport(350)) { opened = true; break; }
+                if (controller.WaitForStateReport(350)) {
+                    opened = true;
+                    controllerPath = path;
+                    break;
+                }
                 controller.Close();
             }
             if (!opened) {
@@ -875,7 +987,17 @@ void ControllerLoop() {
                 continue;
             }
             if (!ShouldHoldController()) { controller.Close(); continue; }
-            if (controller.ClaimGameModeAccess() != SteamController::AccessClaim::Exclusive) {
+            const auto claim = controller.ClaimGameModeAccess();
+            if (claim != SteamController::AccessClaim::Exclusive &&
+                steamTakeover.load() && autoMode.load() && processElevated &&
+                IsTargetForeground() && Clock::now() >= retryTakeoverAfter) {
+                controller.Close();
+                SetStatus(L"Steamからコントローラーを切り替え中です");
+                tookFromSteam = TakeControllerFromSteam(controller, controllerPath);
+                if (!tookFromSteam)
+                    retryTakeoverAfter = Clock::now() + std::chrono::seconds(20);
+            }
+            if (claim != SteamController::AccessClaim::Exclusive && !tookFromSteam) {
                 SetStatus(L"取得できません：Steamなどが使用中です");
                 controller.Close();
                 std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -884,6 +1006,7 @@ void ControllerLoop() {
             if (!controller.DisableLizardMode()) {
                 controller.EnableLizardMode();
                 controller.Close();
+                if (tookFromSteam) ReturnControllerToSteam(controllerPath);
                 SetStatus(L"Lizard Modeを無効化できませんでした");
                 std::this_thread::sleep_for(std::chrono::seconds(1));
                 continue;
@@ -1008,6 +1131,11 @@ void ControllerLoop() {
             sequenceStates = {};
             controller.EnableLizardMode();
             controller.Close();
+            if (tookFromSteam) {
+                SetStatus(L"Steamへコントローラーを返しています");
+                if (!ReturnControllerToSteam(controllerPath))
+                    SetStatus(L"Steamへの切り替えを確認できませんでした");
+            }
             if (mainWindow) PostMessageW(mainWindow, WM_CONTROLLER_INPUT, 0, 0);
             if (mainWindow) { PostMessageW(mainWindow, WM_STICK_INPUT, 0, 0); PostMessageW(mainWindow, WM_STICK_INPUT, 1, 0); }
             if (ShouldHoldController() && running)
@@ -2039,7 +2167,7 @@ void ImportSettings(HWND window) {
                     MB_OK | MB_ICONERROR);
         return;
     }
-    ConfigSnapshot previous{language, closeBehavior, autoMode.load(), selectedPreset,
+    ConfigSnapshot previous{language, closeBehavior, autoMode.load(), steamTakeover.load(), selectedPreset,
                             folders, presets};
     const bool previousRequested = requested.exchange(false);
     ApplyConfig(std::move(imported));
@@ -2389,6 +2517,8 @@ LRESULT CALLBACK MainProc(HWND window, UINT message, WPARAM wParam, LPARAM lPara
 }  // namespace
 
 int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show) {
+    const int deviceCycleResult = RunDeviceCycleCommand();
+    if (deviceCycleResult >= 0) return deviceCycleResult;
     processElevated = IsProcessElevated();
     HANDLE singleInstance = CreateMutexW(nullptr, TRUE, L"Remapcon_SingleInstance");
     if (!singleInstance || GetLastError() == ERROR_ALREADY_EXISTS) {
@@ -2407,6 +2537,15 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show) {
         }
         if (singleInstance) CloseHandle(singleInstance);
         return 0;
+    }
+    const bool cycleRecovered = RecoverInterruptedDeviceCycle();
+    if (!cycleRecovered) {
+        MessageBoxW(nullptr,
+            L"前回の切り替えでコントローラーデバイスが無効のまま残った可能性があります。"
+            L"Windowsのデバイスマネージャーでコントローラーを有効にしてください。",
+            L"コントローラーの復旧が必要です", MB_OK | MB_ICONERROR);
+        CloseHandle(singleInstance);
+        return 1;
     }
     SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
     const HRESULT apartment = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
