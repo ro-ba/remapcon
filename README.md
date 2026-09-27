@@ -1,12 +1,16 @@
 # Remapcon
 
-A Windows app for mapping the 2026 Steam Controller / Puck to keyboard and mouse input.
+Launching an app through another launcher, only to find that your Steam Input layout did not switch? Getting unintended input from the Desktop Layout? Remapcon helps you use the 2026 Steam Controller with the mapping you want for the app in front of you.
+
+It reads the controller directly and maps buttons, sticks, and trackpads to keyboard and mouse input. A preset can activate automatically while its target app is in the foreground. Puck connections are supported.
 
 [日本語の説明](README.ja.md)
 
 ## Why I built it
 
-Steam Input is usually enough. In my setup, it could not reliably track an app launched through a separate launcher, and Desktop Layout or Lizard Mode input could overlap with the intended mapping. Remapcon reads the controller directly and maps its input for the app you choose.
+Steam Input is usually enough. In my setup, it could not reliably track an app launched through a separate launcher, and Desktop Layout or Lizard Mode input could overlap with the intended mapping. I built Remapcon so I could bring that app to the foreground and use the keyboard and mouse mapping I intended.
+
+It is also useful for apps you want to control with keyboard and mouse bindings rather than gamepad input. Remapcon does not create a virtual Xbox controller.
 
 ## Features
 
@@ -32,8 +36,6 @@ You need Windows 10/11 and a 2026 Steam Controller / Puck. Install the [Microsof
 3. Double-click a mapping row to edit it. Turn on **Auto enable in target app** to activate the preset while that app is in the foreground.
 
 If the target app runs as administrator, run Remapcon as administrator too.
-
-To update, select **Check for updates** in Settings. If a newer release is available, choose **Update and restart**. Remapcon verifies the ZIP's SHA-256, exits, replaces its files, and restarts. Windows may request administrator permission if the app folder is not writable. Users of v1.1.1 or earlier need to extract the new ZIP manually once to get the updater.
 
 ## Build from source
 
