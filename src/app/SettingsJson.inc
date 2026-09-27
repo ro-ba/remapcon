@@ -69,7 +69,11 @@ std::wstring ConfigJson() {
             L",\"leftPadMode\":" + std::to_wstring(preset.leftPadMode) +
             L",\"rightPadMode\":" + std::to_wstring(preset.rightPadMode) +
             L",\"leftPadSensitivity\":" + std::to_wstring(preset.leftPadSensitivity) +
-            L",\"rightPadSensitivity\":" + std::to_wstring(preset.rightPadSensitivity) + L',';
+            L",\"rightPadSensitivity\":" + std::to_wstring(preset.rightPadSensitivity) +
+            L",\"leftStickDeadzone\":" + std::to_wstring(preset.leftStickDeadzone) +
+            L",\"rightStickDeadzone\":" + std::to_wstring(preset.rightStickDeadzone) +
+            L",\"leftStickOverlap\":" + std::to_wstring(preset.leftStickOverlap) +
+            L",\"rightStickOverlap\":" + std::to_wstring(preset.rightStickOverlap) + L',';
         AppendConfigMapping(output, preset);
         output += L",\"layers\":[";
         for (size_t layer = 0; layer < preset.layers.size(); ++layer) {
@@ -244,6 +248,10 @@ bool ReadConfig(const std::wstring& path, ConfigSnapshot& result) {
             preset.leftPadSensitivity < 25 ||
             !ConfigNumber(item, L"rightPadSensitivity", preset.rightPadSensitivity, 400) ||
             preset.rightPadSensitivity < 25 || !ReadConfigMapping(item, preset, false)) return false;
+        if ((item.Get(L"leftStickDeadzone") && !ConfigNumber(item, L"leftStickDeadzone", preset.leftStickDeadzone, 32767)) ||
+            (item.Get(L"rightStickDeadzone") && !ConfigNumber(item, L"rightStickDeadzone", preset.rightStickDeadzone, 32767)) ||
+            (item.Get(L"leftStickOverlap") && !ConfigNumber(item, L"leftStickOverlap", preset.leftStickOverlap, 32767)) ||
+            (item.Get(L"rightStickOverlap") && !ConfigNumber(item, L"rightStickOverlap", preset.rightStickOverlap, 32767))) return false;
         const auto* layerArray = ConfigField(item, L"layers", Type::Array);
         if (!layerArray || layerArray->array.size() > ButtonCount) return false;
         for (const auto& layerItem : layerArray->array) {

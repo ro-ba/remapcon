@@ -42,6 +42,10 @@
       padSensitivityHelp: '100%が標準。マウス移動とスクロールの両方に適用します。',
       invalidSensitivity: '感度は25〜400%で入力してください。',
       stickInfo: '左右スティックの傾きは十字キーと別に設定できます。L3/R3の押し込みは基本ボタンで設定します。',
+      stickSettings: 'スティックの反応範囲', stickSettingType: '感度設定',
+      stickExplanation: '中心の円がデッドゾーンです。斜めの重なり幅を広げると、2方向を同時に入力しやすくなります。確認中はキーを送信しません。',
+      leftStick: '左スティック', rightStick: '右スティック', deadzone: 'デッドゾーン', overlap: '斜めの重なり幅',
+      invalidStickSetting: '0〜32767の整数で入力してください。', noDirection: '入力なし',
       closeBehavior: '閉じるボタンの動作', closeAsk: '毎回確認', closeTray: 'トレイに格納',
       closeExit: '終了', closeTitle: 'アプリを閉じる',
       closeExplanation: 'トレイに格納すると、アプリは動作を続けます。通知領域のアイコンから再表示・終了できます。',
@@ -99,6 +103,10 @@
       padSensitivityHelp: '100% is standard. Applies to mouse movement and scrolling.',
       invalidSensitivity: 'Enter sensitivity from 25 to 400%.',
       stickInfo: 'Stick directions have separate bindings from the D-pad. L3/R3 clicks are basic buttons.',
+      stickSettings: 'Stick response', stickSettingType: 'Response settings',
+      stickExplanation: 'The center circle is the deadzone. A wider diagonal overlap makes two directions activate together more easily. No keys are sent while testing.',
+      leftStick: 'Left stick', rightStick: 'Right stick', deadzone: 'Deadzone', overlap: 'Diagonal overlap',
+      invalidStickSetting: 'Enter an integer from 0 to 32767.', noDirection: 'No input',
       closeBehavior: 'Close button action', closeAsk: 'Ask every time', closeTray: 'Minimize to tray',
       closeExit: 'Exit', closeTitle: 'Close the app',
       closeExplanation: 'The app keeps running in the tray. Use its notification icon to reopen or exit.',
@@ -141,6 +149,10 @@
   let updateStatus = 'idle';
   let latestVersion = '';
   let updateFailure = '';
+  let stickPreviewOwned = false;
+  const stickPosition = {left:{x:0,y:0}, right:{x:0,y:0}};
+  const stickHeld = {left:false, right:false};
+  const stickDiagonal = {left:false, right:false};
   const openFolders = new Set();
   const targetIcons = new Map();
   const requestedIcons = new Set();
@@ -496,8 +508,55 @@
     paintSensitivityRange($('right-pad-sensitivity-range'));
     $('pad-dialog').hidden = false; $('left-pad-mode').focus();
   }
+  function renderStick(side) {
+    if ($('stick-dialog').hidden) return;
+    const {x,y} = stickPosition[side];
+    const deadzone = Math.max(0, Math.min(32767, Number($(`${side}-stick-deadzone`).value) || 0));
+    const overlap = Math.max(0, Math.min(32767, Number($(`${side}-stick-overlap`).value) || 0));
+    const ax = Math.abs(x), ay = Math.abs(y);
+    const threshold = stickHeld[side] ? Math.max(0, deadzone - 1500) : deadzone;
+    stickHeld[side] = (ax || ay) && ax * ax + ay * ay >= threshold * threshold;
+    const diagonal = stickHeld[side] && Math.min(ax, ay) >= Math.max(1500, Math.floor(Math.max(ax, ay) / 10)) &&
+      Math.abs(ax - ay) <= overlap + (stickDiagonal[side] ? 700 : 0);
+    stickDiagonal[side] = diagonal;
+    const directions = [];
+    if (stickHeld[side]) {
+      if (ay >= ax || diagonal) directions.push(y > 0 ? '↑' : '↓');
+      if (ax >= ay || diagonal) directions.push(x > 0 ? '→' : '←');
+    }
+    $(`${side}-stick-direction`).textContent = directions.length ? directions.join(' + ') : tr('noDirection');
+    $(`${side}-stick-dot`).style.left = (50 + Math.max(-1, Math.min(1, x / 32767)) * 46) + '%';
+    $(`${side}-stick-dot`).style.top = (50 - Math.max(-1, Math.min(1, y / 32767)) * 46) + '%';
+    $(`${side}-stick-dot`).classList.toggle('active', !!directions.length);
+    $(`${side}-stick-zone`).style.width = $(`${side}-stick-zone`).style.height = (deadzone / 32767 * 92) + '%';
+  }
+  function openStickDialog() {
+    for (const side of ['left','right']) {
+      for (const setting of ['deadzone','overlap']) {
+        const value = current()[`${side}Stick${setting[0].toUpperCase()}${setting.slice(1)}`];
+        $(`${side}-stick-${setting}`).value = String(value);
+        $(`${side}-stick-${setting}-range`).value = String(value);
+        paintStickRange($(`${side}-stick-${setting}-range`));
+      }
+      stickPosition[side] = {x:0,y:0}; stickHeld[side] = false; stickDiagonal[side] = false;
+    }
+    $('stick-dialog').hidden = false;
+    for (const side of ['left','right']) renderStick(side);
+    stickPreviewOwned = !state.preview;
+    if (stickPreviewOwned) send('setPreview', 1);
+    $('left-stick-deadzone-range').focus();
+  }
+  function paintStickRange(range) { range.style.setProperty('--range-progress', (Number(range.value) / 32767 * 100) + '%'); }
   function renderRows() {
     const host = $('rows'); host.innerHTML = '';
+    if (category === -1 || category === 5) {
+      const row = document.createElement('button'); row.type = 'button'; row.className = 'input-row pad-mode-row';
+      row.innerHTML = '<strong>' + esc(tr('stickSettings')) + '</strong><span class="subtle">' +
+        esc(tr('deadzone')) + ' · ' + esc(tr('overlap')) + '</span><span class="kind">' + esc(tr('stickSettingType')) + '</span>';
+      row.ondblclick = openStickDialog;
+      row.onkeydown = event => { if (event.key === 'Enter') { event.preventDefault(); openStickDialog(); } };
+      host.append(row);
+    }
     if (category === -1 || category === 3) {
       for (const side of ['left','right']) {
         const row = document.createElement('button'); row.type = 'button'; row.className = 'input-row pad-mode-row';
@@ -589,7 +648,11 @@
     else updateTreeSelection();
     renderCategory(); renderDetails();
   }
-  function close(id) { $(id).hidden = true; captureTarget = ''; if (id === 'delete-dialog') pendingDelete = null; }
+  function close(id) {
+    $(id).hidden = true; captureTarget = '';
+    if (id === 'delete-dialog') pendingDelete = null;
+    if (id === 'stick-dialog' && stickPreviewOwned) { stickPreviewOwned = false; send('setPreview', 0); }
+  }
   function openName(mode, target) {
     naming = {mode,target};
     const source = mode.startsWith('preset') && mode !== 'preset-new' ?
@@ -715,6 +778,26 @@
     send('setPadConfig', $('left-pad-mode').value, $('right-pad-mode').value, left, right);
     close('pad-dialog');
   };
+  $('stick-save').onclick = () => {
+    const fields = ['left-stick-deadzone','right-stick-deadzone','left-stick-overlap','right-stick-overlap'];
+    const values = fields.map(id => Number($(id).value));
+    if (fields.some(id => $(id).value.trim() === '') ||
+        values.some(value => !Number.isInteger(value) || value < 0 || value > 32767)) {
+      toast(tr('invalidStickSetting')); return;
+    }
+    send('setStickConfig', ...values); close('stick-dialog');
+  };
+  for (const side of ['left','right']) for (const setting of ['deadzone','overlap']) {
+    const range = $(`${side}-stick-${setting}-range`), number = $(`${side}-stick-${setting}`);
+    range.oninput = () => { number.value = range.value; paintStickRange(range); renderStick(side); };
+    number.oninput = () => {
+      const value = Number(number.value);
+      if (number.value !== '' && Number.isFinite(value)) {
+        range.value = String(Math.max(0, Math.min(32767, value)));
+        paintStickRange(range); renderStick(side);
+      }
+    };
+  }
   for (const side of ['left','right']) {
     const range = $(`${side}-pad-sensitivity-range`);
     const number = $(`${side}-pad-sensitivity`);
@@ -752,7 +835,7 @@
       return;
     }
     if (event.key === 'Escape') {
-      for (const id of ['already-running-dialog','update-dialog','delete-dialog','import-dialog','close-dialog','editor','name-dialog','move-dialog','pad-dialog','settings']) if (!$(id).hidden) {
+      for (const id of ['already-running-dialog','update-dialog','delete-dialog','import-dialog','close-dialog','editor','name-dialog','move-dialog','pad-dialog','stick-dialog','settings']) if (!$(id).hidden) {
         close(id); event.preventDefault(); return;
       }
     }
@@ -810,8 +893,13 @@
     }
     else if (message.type === 'window') { $('win-max').textContent = message.maximized ? '❐' : '□'; $('win-max').title = message.maximized ? '元のサイズに戻す' : '最大化'; }
     else if (message.type === 'status') { $('status').textContent = statusText(message.text); $('connection').textContent = compactStatus(message.text); $('connection').title = statusText(message.text); }
+    else if (message.type === 'stickInput' && !$('stick-dialog').hidden) {
+      const side = message.side === 0 ? 'left' : 'right';
+      stickPosition[side] = {x:message.x, y:message.y}; renderStick(side);
+    }
     else if (message.type === 'input') {
       if (!state || !state.preview) { clearHighlight(); return; }
+      if (!$('stick-dialog').hidden) return;
       const active = new Set(message.buttons);
       const signature = message.buttons.join(',');
       if (signature !== lastInputSignature && message.buttons.length) {

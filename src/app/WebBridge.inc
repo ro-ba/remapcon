@@ -65,7 +65,11 @@ void SendUiState() {
             L",\"leftPadMode\":" + std::to_wstring(preset.leftPadMode) +
             L",\"rightPadMode\":" + std::to_wstring(preset.rightPadMode) +
             L",\"leftPadSensitivity\":" + std::to_wstring(preset.leftPadSensitivity) +
-            L",\"rightPadSensitivity\":" + std::to_wstring(preset.rightPadSensitivity) + L",";
+            L",\"rightPadSensitivity\":" + std::to_wstring(preset.rightPadSensitivity) +
+            L",\"leftStickDeadzone\":" + std::to_wstring(preset.leftStickDeadzone) +
+            L",\"rightStickDeadzone\":" + std::to_wstring(preset.rightStickDeadzone) +
+            L",\"leftStickOverlap\":" + std::to_wstring(preset.leftStickOverlap) +
+            L",\"rightStickOverlap\":" + std::to_wstring(preset.rightStickOverlap) + L",";
         AppendMappingJson(json, preset);
         json += L",\"layers\":[";
         for (size_t layer = 0; layer < preset.layers.size(); ++layer) {
@@ -278,6 +282,22 @@ void OnWebMessage(const std::wstring& raw) {
             preset.rightPadMode = rightMode;
             preset.leftPadSensitivity = leftSensitivity;
             preset.rightPadSensitivity = rightSensitivity;
+            okay = SavePresets();
+            if (!okay) preset = old;
+            else PublishSelectedPreset();
+        }
+    } else if (command == L"setStickConfig") {
+        uint32_t leftDeadzone = 0, rightDeadzone = 0, leftOverlap = 0, rightOverlap = 0;
+        if (number(1, leftDeadzone) && number(2, rightDeadzone) &&
+            number(3, leftOverlap) && number(4, rightOverlap) &&
+            leftDeadzone <= 32767 && rightDeadzone <= 32767 &&
+            leftOverlap <= 32767 && rightOverlap <= 32767) {
+            const auto old = presets[selectedPreset];
+            auto& preset = presets[selectedPreset];
+            preset.leftStickDeadzone = leftDeadzone;
+            preset.rightStickDeadzone = rightDeadzone;
+            preset.leftStickOverlap = leftOverlap;
+            preset.rightStickOverlap = rightOverlap;
             okay = SavePresets();
             if (!okay) preset = old;
             else PublishSelectedPreset();

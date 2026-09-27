@@ -33,6 +33,7 @@ namespace {
 using Clock = std::chrono::steady_clock;
 constexpr UINT WM_CONTROLLER_STATUS = WM_APP + 1;
 constexpr UINT WM_CONTROLLER_INPUT = WM_APP + 2;
+constexpr UINT WM_STICK_INPUT = WM_APP + 9;
 constexpr UINT WM_TRAY_ICON = WM_APP + 3;
 constexpr UINT WM_FORCE_EXIT = WM_APP + 4;
 constexpr UINT WM_UI_READY = WM_APP + 5;
@@ -199,6 +200,8 @@ uint32_t liveLeftPadMode = 0;
 uint32_t liveRightPadMode = 0;
 uint32_t liveLeftPadSensitivity = 100;
 uint32_t liveRightPadSensitivity = 100;
+uint32_t liveLeftStickDeadzone = 12288, liveRightStickDeadzone = 12288;
+uint32_t liveLeftStickOverlap = 16000, liveRightStickOverlap = 16000;
 std::atomic<uint64_t> targetVersion{0};
 uint64_t mappingGeneration = 0;
 struct Preset {
@@ -209,6 +212,8 @@ struct Preset {
     uint32_t rightPadMode = 0;
     uint32_t leftPadSensitivity = 100;
     uint32_t rightPadSensitivity = 100;
+    uint32_t leftStickDeadzone = 12288, rightStickDeadzone = 12288;
+    uint32_t leftStickOverlap = 16000, rightStickOverlap = 16000;
     std::array<uint32_t, ButtonCount> mapping{};
     std::array<TurboSettings, ButtonCount> turbo{};
     std::array<SequenceSettings, ButtonCount> sequence{};
@@ -467,11 +472,24 @@ struct TapState {
 
 struct StickDirections {
     bool up = false, down = false, left = false, right = false;
-    void Update(int16_t x, int16_t y) {
-        up = y > (up ? 0x2800 : 0x3000);
-        down = y < (down ? -0x2800 : -0x3000);
-        left = x < (left ? -0x2800 : -0x3000);
-        right = x > (right ? 0x2800 : 0x3000);
+    bool active = false;
+    void Update(int16_t x, int16_t y, uint32_t deadzone, uint32_t overlap) {
+        const int32_t ax = std::abs(static_cast<int32_t>(x));
+        const int32_t ay = std::abs(static_cast<int32_t>(y));
+        const int64_t radiusSquared = static_cast<int64_t>(ax) * ax + static_cast<int64_t>(ay) * ay;
+        const int32_t release = std::max(0, static_cast<int32_t>(deadzone) - 1500);
+        const int32_t threshold = active ? release : static_cast<int32_t>(deadzone);
+        active = radiusSquared >= static_cast<int64_t>(threshold) * threshold && (ax || ay);
+        if (!active) { up = down = left = right = false; return; }
+        const bool wasDiagonal = (up || down) && (left || right);
+        const bool diagonal = std::min(ax, ay) >= std::max(1500, std::max(ax, ay) / 10) &&
+            std::abs(ax - ay) <= static_cast<int32_t>(overlap) + (wasDiagonal ? 700 : 0);
+        const bool horizontal = ax >= ay || diagonal;
+        const bool vertical = ay >= ax || diagonal;
+        up = vertical && y > 0;
+        down = vertical && y < 0;
+        left = horizontal && x < 0;
+        right = horizontal && x > 0;
     }
 };
 
@@ -480,6 +498,8 @@ void UpdatePhysical(const uint8_t* report, size_t size,
                     PadPressState& leftPress, PadPressState& rightPress,
                     TapState& leftTap, TapState& rightTap,
                     StickDirections& leftStick, StickDirections& rightStick,
+                    uint32_t leftDeadzone, uint32_t rightDeadzone,
+                    uint32_t leftOverlap, uint32_t rightOverlap,
                     Clock::time_point now) {
     if (size < 10) return;
     const uint8_t b0 = report[2], b1 = report[3], b2 = report[4], b3 = report[5];
@@ -500,12 +520,12 @@ void UpdatePhysical(const uint8_t* report, size_t size,
     if (size >= 18) {
         const int16_t x = ReadInt16(report + 10);
         const int16_t y = ReadInt16(report + 12);
-        leftStick.Update(x, y);
+        leftStick.Update(x, y, leftDeadzone, leftOverlap);
         physical[LeftStickUp] = leftStick.up;
         physical[LeftStickDown] = leftStick.down;
         physical[LeftStickLeft] = leftStick.left;
         physical[LeftStickRight] = leftStick.right;
-        rightStick.Update(ReadInt16(report + 14), ReadInt16(report + 16));
+        rightStick.Update(ReadInt16(report + 14), ReadInt16(report + 16), rightDeadzone, rightOverlap);
         physical[RightStickUp] = rightStick.up;
         physical[RightStickDown] = rightStick.down;
         physical[RightStickLeft] = rightStick.left;
@@ -879,6 +899,7 @@ void ControllerLoop() {
             rightPress = {};
             leftTap = {};
             rightTap = {};
+            int16_t previewStickX[2]{}, previewStickY[2]{};
             leftStick = {}; rightStick = {};
             leftMotion = {}; rightMotion = {};
             bool leftClickHaptic = false, rightClickHaptic = false;
@@ -906,19 +927,26 @@ void ControllerLoop() {
                     std::this_thread::sleep_for(std::chrono::milliseconds(16));
                 }
                 if (size >= 10 && SteamController::IsStateReportId(report[0])) {
+                    if (size >= 18) {
+                        previewStickX[0] = ReadInt16(report + 10); previewStickY[0] = ReadInt16(report + 12);
+                        previewStickX[1] = ReadInt16(report + 14); previewStickY[1] = ReadInt16(report + 16);
+                    } else {
+                        previewStickX[0] = previewStickX[1] = previewStickY[0] = previewStickY[1] = 0;
+                    }
+                    uint32_t leftMode, rightMode, leftSensitivity, rightSensitivity;
+                    uint32_t leftDeadzone, rightDeadzone, leftOverlap, rightOverlap;
+                    {
+                        std::lock_guard<std::mutex> lock(bindingMutex);
+                        leftMode = liveLeftPadMode; rightMode = liveRightPadMode;
+                        leftSensitivity = liveLeftPadSensitivity; rightSensitivity = liveRightPadSensitivity;
+                        leftDeadzone = liveLeftStickDeadzone; rightDeadzone = liveRightStickDeadzone;
+                        leftOverlap = liveLeftStickOverlap; rightOverlap = liveRightStickOverlap;
+                    }
                     UpdatePhysical(report, size, physical, leftPress, rightPress,
-                                   leftTap, rightTap, leftStick, rightStick, Clock::now());
+                                   leftTap, rightTap, leftStick, rightStick,
+                                   leftDeadzone, rightDeadzone, leftOverlap, rightOverlap, Clock::now());
                     lastReport = Clock::now();
                     if (size >= 30) {
-                        uint32_t leftMode = 0, rightMode = 0;
-                        uint32_t leftSensitivity = 100, rightSensitivity = 100;
-                        {
-                            std::lock_guard<std::mutex> lock(bindingMutex);
-                            leftMode = liveLeftPadMode;
-                            rightMode = liveRightPadMode;
-                            leftSensitivity = liveLeftPadSensitivity;
-                            rightSensitivity = liveRightPadSensitivity;
-                        }
                         const bool canMove = IsTargetForeground() && !previewMode.load();
                         if (canMove && physical[LeftPadClick] && !leftClickHaptic)
                             controller.PulseTrackpadHaptic(true, true);
@@ -947,6 +975,7 @@ void ControllerLoop() {
                     leftTap = {};
                     rightTap = {};
                     leftStick = {}; rightStick = {};
+                    previewStickX[0] = previewStickX[1] = previewStickY[0] = previewStickY[1] = 0;
                     leftMotion = {}; rightMotion = {};
                     leftClickHaptic = rightClickHaptic = false;
                 } else {
@@ -959,6 +988,13 @@ void ControllerLoop() {
                     for (size_t index = 0; index < ButtonCount; ++index)
                         if (physical[index]) mask |= static_cast<WPARAM>(1) << index;
                     if (mainWindow) PostMessageW(mainWindow, WM_CONTROLLER_INPUT, mask, 0);
+                    if (mainWindow) {
+                        for (WPARAM side = 0; side < 2; ++side) {
+                            const uint32_t packed = static_cast<uint16_t>(previewStickX[side]) |
+                                (static_cast<uint32_t>(static_cast<uint16_t>(previewStickY[side])) << 16);
+                            PostMessageW(mainWindow, WM_STICK_INPUT, side, static_cast<LPARAM>(packed));
+                        }
+                    }
                     lastPreview = inputNow;
                 }
                 ApplyMappings(physical, IsTargetForeground() && !previewMode.load(), held, active, turboStates,
@@ -973,6 +1009,7 @@ void ControllerLoop() {
             controller.EnableLizardMode();
             controller.Close();
             if (mainWindow) PostMessageW(mainWindow, WM_CONTROLLER_INPUT, 0, 0);
+            if (mainWindow) { PostMessageW(mainWindow, WM_STICK_INPUT, 0, 0); PostMessageW(mainWindow, WM_STICK_INPUT, 1, 0); }
             if (ShouldHoldController() && running)
                 SetStatus(L"通信が切れました：再接続します");
         }
@@ -1134,6 +1171,10 @@ void PublishSelectedPreset() {
     liveRightPadMode = presets[selectedPreset].rightPadMode;
     liveLeftPadSensitivity = presets[selectedPreset].leftPadSensitivity;
     liveRightPadSensitivity = presets[selectedPreset].rightPadSensitivity;
+    liveLeftStickDeadzone = presets[selectedPreset].leftStickDeadzone;
+    liveRightStickDeadzone = presets[selectedPreset].rightStickDeadzone;
+    liveLeftStickOverlap = presets[selectedPreset].leftStickOverlap;
+    liveRightStickOverlap = presets[selectedPreset].rightStickOverlap;
     ++targetVersion;
     ++mappingGeneration;
 }
@@ -2245,7 +2286,11 @@ LRESULT CALLBACK MainProc(HWND window, UINT message, WPARAM wParam, LPARAM lPara
         return hit;
     }
     case WM_ACTIVATE:
-        if (LOWORD(wParam) == WA_INACTIVE) PostMessageW(window, WM_CONTROLLER_INPUT, 0, 0);
+        if (LOWORD(wParam) == WA_INACTIVE) {
+            PostMessageW(window, WM_CONTROLLER_INPUT, 0, 0);
+            PostMessageW(window, WM_STICK_INPUT, 0, 0);
+            PostMessageW(window, WM_STICK_INPUT, 1, 0);
+        }
         return 0;
     case WM_CONTROLLER_STATUS:
         latestStatus = reinterpret_cast<const wchar_t*>(lParam);
@@ -2272,6 +2317,15 @@ LRESULT CALLBACK MainProc(HWND window, UINT message, WPARAM wParam, LPARAM lPara
                 json += std::to_wstring(index);
             }
             webUi.SendJson(json + L"]}");
+        }
+        return 0;
+    case WM_STICK_INPUT:
+        if (webReady) {
+            const uint32_t packed = static_cast<uint32_t>(lParam);
+            const int16_t x = static_cast<int16_t>(packed & 0xffff);
+            const int16_t y = static_cast<int16_t>(packed >> 16);
+            webUi.SendJson(L"{\"type\":\"stickInput\",\"side\":" + std::to_wstring(wParam) +
+                L",\"x\":" + std::to_wstring(x) + L",\"y\":" + std::to_wstring(y) + L"}");
         }
         return 0;
     case WM_TRAY_ICON:

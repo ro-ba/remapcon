@@ -12,6 +12,7 @@ Steam Input is usually enough. In my setup, it could not reliably track an app l
 
 - Per-app presets organized in folders
 - Independent D-pad and left/right stick direction mappings; trackpad movement, tap, and press actions with movement and press haptics
+- Adjustable deadzones and diagonal overlap for each stick, with a live response preview
 - Layers, turbo, and key sequences
 - Automatic activation while the target app is in the foreground
 - JSON import and export

@@ -149,6 +149,16 @@ h3 { margin: 17px 0 8px; font-size: 14px; }
 .stick-summary { background: #302a3b; color: #c8bfd1; cursor: default; }
 .stick-summary:hover { background: #302a3b; }
 .stick-summary .kind { font-size: 11px; }
+.stick-dialog { width: min(680px, 100%); }
+.stick-settings-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.stick-settings-side h3 { margin: 12px 0; }
+.stick-plot { position: relative; width: 154px; height: 154px; margin: 0 auto; border: 1px solid #6a5c79; border-radius: 50%; background: linear-gradient(90deg, transparent calc(50% - .5px), #574c62 50%, transparent calc(50% + .5px)), linear-gradient(transparent calc(50% - .5px), #574c62 50%, transparent calc(50% + .5px)), #25212e; overflow: hidden; }
+.stick-deadzone { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); border: 1px solid #9374b3; border-radius: 50%; background: #67517b55; }
+.stick-dot { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 13px; height: 13px; border-radius: 50%; border: 2px solid #e7d9f5; background: #9474ba; box-shadow: 0 0 10px #ae83d1; }
+.stick-dot.active { background: #b69add; }
+.stick-direction { min-height: 19px; margin: 10px 0; text-align: center; font-weight: 700; color: #dbc2f6; }
+.stick-settings-side .sensitivity-control { margin-bottom: 8px; }
+@media(max-width: 560px) { .stick-settings-grid { grid-template-columns: 1fr; } }
 .app-identity { display: inline-flex; align-items: center; gap: 8px; margin-left: 8px; color: #e3dce9; font-size: 12px; font-weight: 700; white-space: nowrap; pointer-events: none; }
 .app-mark { display: inline-flex; flex: 0 0 24px; width: 24px; height: 24px; }
 .app-mark svg { display: block; width: 100%; height: 100%; }
