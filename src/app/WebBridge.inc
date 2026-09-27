@@ -218,6 +218,14 @@ void OnWebMessage(const std::wstring& raw) {
                        JsonString(TargetIconDataUri(path, TargetIconCacheDirectory())) + L"}");
         return;
     }
+    if (command == L"openReleases") {
+        const auto result = ShellExecuteW(mainWindow, L"open",
+            L"https://github.com/ro-ba/remapcon/releases/latest",
+            nullptr, nullptr, SW_SHOWNORMAL);
+        if (reinterpret_cast<INT_PTR>(result) <= 32)
+            webUi.SendJson(L"{\"type\":\"updateOpenError\"}");
+        return;
+    }
     bool okay = false;
     if (command == L"selectPreset") {
         uint32_t index = 0;

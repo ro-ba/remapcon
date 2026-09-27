@@ -46,6 +46,12 @@
       adminWarning: '管理者として実行されていません。ゲーム内で入力が効かない場合は、管理者としてアプリを再起動してください。',
       dismissWarning: '警告を閉じる',
       alreadyRunningTitle: 'アプリは起動中です', alreadyRunningExplanation: '開いているウィンドウに切り替えました。', ok: 'OK',
+      updates: 'アップデート', currentVersion: '現在のバージョン', checkUpdates: '更新を確認',
+      viewRelease: 'リリースを見る', updateChecking: '最新版を確認しています…',
+      updateAvailable: '新しいバージョン {version} を利用できます。',
+      updateCurrent: '最新版を使用しています。', updateAhead: '公開版より新しいビルドを使用しています。',
+      updateError: '確認できませんでした。ネット接続を確認して、もう一度お試しください。',
+      updateOpenError: 'リリースページを開けませんでした。',
     },
     en: {
       inputTest: 'Find button', inputTestHelp: 'Press a controller button to highlight its settings row. No key input is sent while checking.',
@@ -85,6 +91,12 @@
       adminWarning: 'This app is not running as administrator. If inputs do not work in your game, restart the app as administrator.',
       dismissWarning: 'Dismiss warning',
       alreadyRunningTitle: 'Already running', alreadyRunningExplanation: 'Switched to the open window.', ok: 'OK',
+      updates: 'Updates', currentVersion: 'Current version', checkUpdates: 'Check for updates',
+      viewRelease: 'View release', updateChecking: 'Checking for updates…',
+      updateAvailable: 'Version {version} is available.',
+      updateCurrent: 'You are using the latest version.', updateAhead: 'This build is newer than the public release.',
+      updateError: 'Could not check for updates. Check your connection and try again.',
+      updateOpenError: 'Could not open the release page.',
     },
   };
   let state = null;
@@ -102,12 +114,57 @@
   let treeSignature = '';
   let startupReadySent = false;
   let warningDismissed = false;
+  let updateStatus = 'idle';
+  let latestVersion = '';
   const openFolders = new Set();
   const targetIcons = new Map();
   const requestedIcons = new Set();
   const targetIconCheckAt = new Map();
   const lang = () => state && state.language === 'en' ? 'en' : 'ja';
   const tr = key => t[lang()][key] || key;
+  const parseVersion = value => {
+    const match = /^v?(\d+)\.(\d+)\.(\d+)$/.exec(value);
+    return match ? match.slice(1).map(Number) : null;
+  };
+  const compareVersions = (current, latest) => {
+    const a = parseVersion(current), b = parseVersion(latest);
+    if (!a || !b || [...a, ...b].some(n => !Number.isSafeInteger(n))) return null;
+    for (let i = 0; i < 3; i++) if (a[i] !== b[i]) return a[i] < b[i] ? -1 : 1;
+    return 0;
+  };
+  function renderUpdateStatus() {
+    const status = $('update-status');
+    status.dataset.state = updateStatus;
+    status.textContent = updateStatus === 'idle' ? '' :
+      tr('update' + updateStatus[0].toUpperCase() + updateStatus.slice(1))
+        .replace('{version}', latestVersion);
+    $('check-updates').disabled = updateStatus === 'checking';
+    $('open-release').hidden = updateStatus !== 'available';
+  }
+  async function checkUpdates() {
+    if (updateStatus === 'checking') return;
+    updateStatus = 'checking'; renderUpdateStatus();
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+    try {
+      const response = await fetch('https://api.github.com/repos/ro-ba/remapcon/releases/latest', {
+        headers: {Accept: 'application/vnd.github+json'}, cache: 'no-store', signal: controller.signal
+      });
+      if (!response.ok) throw new Error('GitHub response: ' + response.status);
+      const release = await response.json();
+      const version = release.tag_name;
+      if (typeof version !== 'string') throw new Error('Missing release version');
+      const result = compareVersions($('app-version').textContent.trim(), version);
+      if (result === null) throw new Error('Invalid release version');
+      latestVersion = version;
+      updateStatus = result < 0 ? 'available' : result > 0 ? 'ahead' : 'current';
+    } catch (_) {
+      updateStatus = 'error';
+    } finally {
+      clearTimeout(timeout);
+      renderUpdateStatus();
+    }
+  }
   const esc = value => String(value).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
   const targetName = path => String(path).split(/[\\/]/).pop();
   const englishButtons = {18:'Left pad click',19:'Left pad tap',20:'Right pad click',21:'Right pad tap',22:'Menu',23:'View',24:'Right stick ↑',25:'Right stick ↓',26:'Right stick ←',27:'Right stick →'};
@@ -464,6 +521,7 @@
   function render() {
     if (!state) return;
     translate();
+    renderUpdateStatus();
     $('admin-warning').hidden = state.elevated !== false || warningDismissed;
     $('admin-warning-close').setAttribute('aria-label', tr('dismissWarning'));
     const nextSignature = JSON.stringify([lang(), state.folders,
@@ -558,6 +616,8 @@
   setInterval(() => { if (state && document.visibilityState === 'visible') renderTargetIcon(); }, 30000);
   $('category').onchange = event => { category = Number(event.target.value); renderRows(); };
   $('settings-open').onclick = () => { $('settings').hidden = false; $('language').focus(); };
+  $('check-updates').onclick = checkUpdates;
+  $('open-release').onclick = () => send('openReleases');
   $('move-create-new').onchange = event => { $('move-new-fields').hidden = !event.target.checked;
     $('move-folder').disabled = event.target.checked;
     if (event.target.checked) $('move-new-name').focus(); };
@@ -637,6 +697,7 @@
     }
     else if (message.type === 'closePrompt') { $('close-dialog').hidden = false; $('close-to-tray').focus(); }
     else if (message.type === 'alreadyRunning') { $('already-running-dialog').hidden = false; $('already-running-ok').focus(); }
+    else if (message.type === 'updateOpenError') toast(tr('updateOpenError'));
     else if (message.type === 'targetIcon' && state) {
       requestedIcons.delete(message.path);
       const icon = typeof message.data === 'string' &&

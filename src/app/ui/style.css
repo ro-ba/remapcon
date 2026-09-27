@@ -170,5 +170,8 @@ h3 { margin: 17px 0 8px; font-size: 14px; }
 .preview-help-wrap:hover .preview-tooltip, #preview:focus-visible + .preview-tooltip { visibility: visible; opacity: 1; }
 #target-clear { color: #f5bec7; border-color: #925063; background: #442b38; transition: color .12s ease, border-color .12s ease, background-color .12s ease, box-shadow .12s ease; }
 #target-clear:hover, #target-clear:focus-visible { color: #fff; border-color: #e27791; background: #a03c59; box-shadow: 0 0 0 2px rgba(226,119,145,.18); }
+.update-status { min-height: 18px; margin: 10px 0 0; line-height: 1.5; }
+.update-status[data-state="available"] { color: #d7b5ff; }
+.update-status[data-state="error"] { color: #f0adb7; }
 body:not(.ui-ready) #app { visibility: hidden; }
 body:not(.ui-ready)::after { content: '読み込み中…'; position: fixed; inset: 0; display: grid; place-items: center; color: #bdb4c6; background: #1b1922; font-size: 13px; }
