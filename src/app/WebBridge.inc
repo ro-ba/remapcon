@@ -458,6 +458,13 @@ void OnWebMessage(const std::wstring& raw) {
             layer <= presets[selectedPreset].layers.size() &&
             interval >= 20 && interval <= 2000 && delay <= 5000 &&
             seqInterval >= 20 && seqInterval <= 2000;
+        const auto requestedRole = arg(3);
+        if (requestedRole == L"mouse")
+            valid = valid && button >= LeftPadClick && button <= RightPadTap &&
+                key >= MOUSE_LEFT && key <= MOUSE_MIDDLE;
+        else if (requestedRole == L"key")
+            valid = valid && key != 0 && key != INHERIT &&
+                ValidConfigKey(key, false) && key < MOUSE_LEFT;
         TurboSettings turbo{arg(5) == L"1", interval, delay};
         SequenceSettings sequence;
         sequence.enabled = arg(3) == L"sequence";
@@ -470,7 +477,9 @@ void OnWebMessage(const std::wstring& raw) {
                 const size_t end = keys.find(L',', start);
                 uint32_t item = 0;
                 if (!ParseNumber(keys.substr(start, end == std::wstring::npos ? end : end - start), item) ||
-                    !item || item == INHERIT) { valid = false; break; }
+                    !item || item == INHERIT || !ValidConfigKey(item, false) || item >= MOUSE_LEFT) {
+                    valid = false; break;
+                }
                 sequence.keys.push_back(item);
                 if (end == std::wstring::npos) break;
                 start = end + 1;
@@ -485,7 +494,7 @@ void OnWebMessage(const std::wstring& raw) {
             if (role == L"sequence") key = 0;
             if (role == L"layer" && layer == 0) {
                 okay = SetButtonRole(button, true, target, 0, {}, {});
-            } else if (role == L"key" || role == L"off" || role == L"inherit" ||
+            } else if (role == L"key" || role == L"mouse" || role == L"off" || role == L"inherit" ||
                        role == L"sequence") {
                 if (layer == 0) {
                     bool trigger = false;

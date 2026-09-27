@@ -11,14 +11,12 @@ Steam Input is usually enough. In my setup, it could not reliably track an app l
 ## Features
 
 - Per-app presets organized in folders
-- Button, right-stick direction, and independent touchpad mappings
+- Independent D-pad and left/right stick direction mappings; trackpad movement, tap, and press actions
 - Layers, turbo, and key sequences
 - Automatic activation while the target app is in the foreground
 - JSON import and export
 
 ## Screenshot
-
-The actual UI is shown with fictional presets and target applications.
 
 ![Remapcon with fictional English demo data](docs/images/remapcon-demo-en.png)
 
@@ -42,7 +40,7 @@ Install Visual Studio with Desktop development with C++, the Windows SDK, and CM
 
 ```bat
 cmake -S . -B build -G "Visual Studio 18 2026" -A x64
-cmake --build build --config Release --target Remapcon
+cmake --build build --config Release --target Remapcon RemapconUpdater
 ```
 
 The executable is `build\Release\Remapcon.exe`. To package it with license files, run `cpack --config build\CPackConfig.cmake -C Release -G ZIP`.

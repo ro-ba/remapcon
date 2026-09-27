@@ -82,6 +82,9 @@ constexpr int ID_NAME_OK = 206;
 constexpr int ID_NAME_CANCEL = 207;
 constexpr int ID_INHERIT = 208;
 constexpr uint32_t EXTENDED = 0x10000;
+constexpr uint32_t MOUSE_LEFT = 0x20001;
+constexpr uint32_t MOUSE_RIGHT = 0x20002;
+constexpr uint32_t MOUSE_MIDDLE = 0x20003;
 constexpr uint32_t INHERIT = 0xFFFFFFFFu;
 
 enum Button : size_t {
@@ -91,6 +94,7 @@ enum Button : size_t {
     LeftPadClick, LeftPadTap, RightPadClick, RightPadTap,
     Menu, View,
     RightStickUp, RightStickDown, RightStickLeft, RightStickRight,
+    LeftStickUp, LeftStickDown, LeftStickLeft, LeftStickRight,
     ButtonCount
 };
 
@@ -115,6 +119,10 @@ constexpr std::array<ButtonDef, ButtonCount> BUTTONS{{
     {L"右スティック ↓", L"RightStickDown", 5},
     {L"右スティック ←", L"RightStickLeft", 5},
     {L"右スティック →", L"RightStickRight", 5},
+    {L"左スティック ↑", L"LeftStickUp", 5},
+    {L"左スティック ↓", L"LeftStickDown", 5},
+    {L"左スティック ←", L"LeftStickLeft", 5},
+    {L"左スティック →", L"LeftStickRight", 5},
 }};
 
 constexpr std::array<const wchar_t*, 6> CATEGORIES{{
@@ -252,6 +260,9 @@ bool IsProcessElevated() {
 std::wstring KeyName(uint32_t key) {
     if (key == INHERIT) return L"引き継ぐ";
     if (!key) return L"無効";
+    if (key == MOUSE_LEFT) return L"左クリック";
+    if (key == MOUSE_RIGHT) return L"右クリック";
+    if (key == MOUSE_MIDDLE) return L"中クリック";
     wchar_t name[128]{};
     const LONG parameter = static_cast<LONG>(((key & 0xFFu) << 16) |
         ((key & EXTENDED) ? (1u << 24) : 0u));
@@ -370,6 +381,16 @@ bool ShouldHoldController() {
 
 bool SendKey(uint32_t key, bool down) {
     INPUT input{};
+    if (key >= MOUSE_LEFT && key <= MOUSE_MIDDLE) {
+        input.type = INPUT_MOUSE;
+        const DWORD flags[3][2] = {
+            {MOUSEEVENTF_LEFTUP, MOUSEEVENTF_LEFTDOWN},
+            {MOUSEEVENTF_RIGHTUP, MOUSEEVENTF_RIGHTDOWN},
+            {MOUSEEVENTF_MIDDLEUP, MOUSEEVENTF_MIDDLEDOWN},
+        };
+        input.mi.dwFlags = flags[key - MOUSE_LEFT][down ? 1 : 0];
+        return SendInput(1, &input, sizeof(input)) == 1;
+    }
     input.type = INPUT_KEYBOARD;
     input.ki.wScan = static_cast<WORD>(key & 0xFFu);
     input.ki.dwFlags = KEYEVENTF_SCANCODE |
@@ -480,10 +501,10 @@ void UpdatePhysical(const uint8_t* report, size_t size,
         const int16_t x = ReadInt16(report + 10);
         const int16_t y = ReadInt16(report + 12);
         leftStick.Update(x, y);
-        physical[DPadUp] |= leftStick.up;
-        physical[DPadDown] |= leftStick.down;
-        physical[DPadLeft] |= leftStick.left;
-        physical[DPadRight] |= leftStick.right;
+        physical[LeftStickUp] = leftStick.up;
+        physical[LeftStickDown] = leftStick.down;
+        physical[LeftStickLeft] = leftStick.left;
+        physical[LeftStickRight] = leftStick.right;
         rightStick.Update(ReadInt16(report + 14), ReadInt16(report + 16));
         physical[RightStickUp] = rightStick.up;
         physical[RightStickDown] = rightStick.down;
@@ -491,6 +512,8 @@ void UpdatePhysical(const uint8_t* report, size_t size,
         physical[RightStickRight] = rightStick.right;
     } else {
         leftStick = {}; rightStick = {};
+        physical[LeftStickUp] = physical[LeftStickDown] = false;
+        physical[LeftStickLeft] = physical[LeftStickRight] = false;
         physical[RightStickUp] = physical[RightStickDown] = false;
         physical[RightStickLeft] = physical[RightStickRight] = false;
     }

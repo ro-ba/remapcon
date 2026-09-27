@@ -158,6 +158,7 @@ bool ConfigBoolean(const simple_json::Value& object, const wchar_t* key, bool& r
 }
 bool ValidConfigKey(uint32_t key, bool inherit) {
     return (inherit && key == INHERIT) || key == 0 ||
+        (key >= MOUSE_LEFT && key <= MOUSE_MIDDLE) ||
         ((key & 0xffu) != 0 && (key & ~0x100ffu) == 0);
 }
 template <typename Mapping>
@@ -167,21 +168,26 @@ bool ReadConfigMapping(const simple_json::Value& source, Mapping& destination,
     const auto* mapping = ConfigField(source, L"mapping", Type::Array);
     const auto* turbo = ConfigField(source, L"turbo", Type::Array);
     const auto* sequence = ConfigField(source, L"sequence", Type::Array);
-    if (!mapping || !turbo || !sequence || mapping->array.size() != ButtonCount ||
-        turbo->array.size() != ButtonCount || sequence->array.size() != ButtonCount) return false;
+    constexpr size_t OldButtonCount = RightStickRight + 1;
+    if (!mapping || !turbo || !sequence ||
+        (mapping->array.size() != ButtonCount && mapping->array.size() != OldButtonCount) ||
+        turbo->array.size() != mapping->array.size() ||
+        sequence->array.size() != mapping->array.size()) return false;
     for (size_t index = 0; index < ButtonCount; ++index) {
-        const auto& code = mapping->array[index];
+        const size_t sourceIndex = index < mapping->array.size() ? index :
+            DPadUp + (index - LeftStickUp);
+        const auto& code = mapping->array[sourceIndex];
         if (code.type != Type::Number || code.number > (std::numeric_limits<uint32_t>::max)() ||
             !ValidConfigKey(static_cast<uint32_t>(code.number), inherit)) return false;
         destination.mapping[index] = static_cast<uint32_t>(code.number);
         auto& rapid = destination.turbo[index];
-        const auto& rapidSource = turbo->array[index];
+        const auto& rapidSource = turbo->array[sourceIndex];
         if (!ConfigBoolean(rapidSource, L"enabled", rapid.enabled) ||
             !ConfigNumber(rapidSource, L"intervalMs", rapid.intervalMs, 2000) ||
             rapid.intervalMs < 20 ||
             !ConfigNumber(rapidSource, L"delayMs", rapid.delayMs, 5000)) return false;
         auto& steps = destination.sequence[index];
-        const auto& stepSource = sequence->array[index];
+        const auto& stepSource = sequence->array[sourceIndex];
         if (!ConfigBoolean(stepSource, L"enabled", steps.enabled) ||
             !ConfigBoolean(stepSource, L"repeat", steps.repeat) ||
             !ConfigNumber(stepSource, L"intervalMs", steps.intervalMs, 2000) ||

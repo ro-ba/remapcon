@@ -17,7 +17,7 @@
       inputGroup: '入力の種類', doubleClickHint: '行をダブルクリックして編集', controller: 'コントローラー',
       assignedTo: '割り当て先', type: '設定種別', action: '動作', keyInput: 'キー入力',
       sequence: 'シーケンス', layerSwitch: 'レイヤー切替', disabled: '無効', inherit: '引き継ぐ',
-      sentKey: '送信するキー', capture: 'キーを押す', turbo: '連打する', interval: '間隔（ms）',
+      sentKey: '送信するキー', mouseButton: 'マウスボタン', mouseLeft: '左クリック', mouseRight: '右クリック', mouseMiddle: '中クリック', capture: 'キーを押す', turbo: '連打する', interval: '間隔（ms）',
       delay: '初回遅延（ms）', sequenceKeys: 'キーの順序', addKey: '＋ キーを追加',
       removeLast: '最後を削除', repeatHeld: '押している間繰り返す', destinationLayer: '切り替え先レイヤー',
       cancel: 'キャンセル', save: '保存', name: '名前', folder: 'フォルダ', settings: '設定',
@@ -35,13 +35,13 @@
       selectedLayer: '編集するレイヤー', selectInput: '入力を選択',
       moveToFolder: 'フォルダへ移動', destinationFolder: '移動先', createFolderAndMove: '新規フォルダを作成して移動',
       parentFolder: '親フォルダ', newFolderName: '新しいフォルダ名', move: '移動',
-      padSettings: 'トラックパッドの指移動', padExplanation: '左右は独立設定です。片方を変えても反対側は変わりません。クリックとタップのキー設定もそのまま使えます。',
+      padSettings: 'トラックパッドの指移動', padExplanation: '左右の指移動は独立設定です。タップと押し込みは一覧から別に割り当てできます。',
       leftPadMove: '左パッドの指移動', rightPadMove: '右パッドの指移動', padOff: 'オフ', padMouse: 'マウス移動', padScroll: 'スクロール',
       padMotionType: '指移動', folderNotEmpty: '中身があるフォルダは削除できません。',
       leftPadSensitivity: '左の感度（%）', rightPadSensitivity: '右の感度（%）',
       padSensitivityHelp: '100%が標準。マウス移動とスクロールの両方に適用します。',
       invalidSensitivity: '感度は25〜400%で入力してください。',
-      leftStickSummary: '左スティックの傾き', dpadLinked: '十字キーと同じ割り当て', stickLinked: '共通', stickInfo: 'L3/R3の押し込みは基本ボタンで別に設定します。',
+      stickInfo: '左右スティックの傾きは十字キーと別に設定できます。L3/R3の押し込みは基本ボタンで設定します。',
       closeBehavior: '閉じるボタンの動作', closeAsk: '毎回確認', closeTray: 'トレイに格納',
       closeExit: '終了', closeTitle: 'アプリを閉じる',
       closeExplanation: 'トレイに格納すると、アプリは動作を続けます。通知領域のアイコンから再表示・終了できます。',
@@ -70,7 +70,7 @@
       inputGroup: 'Input group', doubleClickHint: 'Double-click a row to edit', controller: 'Controller',
       assignedTo: 'Assignment', type: 'Type', action: 'Action', keyInput: 'Key input',
       sequence: 'Sequence', layerSwitch: 'Layer switch', disabled: 'Disabled', inherit: 'Inherit',
-      sentKey: 'Key to send', capture: 'Press a key', turbo: 'Turbo', interval: 'Interval (ms)',
+      sentKey: 'Key to send', mouseButton: 'Mouse button', mouseLeft: 'Left click', mouseRight: 'Right click', mouseMiddle: 'Middle click', capture: 'Press a key', turbo: 'Turbo', interval: 'Interval (ms)',
       delay: 'Initial delay (ms)', sequenceKeys: 'Key sequence', addKey: '+ Add key',
       removeLast: 'Remove last', repeatHeld: 'Repeat while held', destinationLayer: 'Destination layer',
       cancel: 'Cancel', save: 'Save', name: 'Name', folder: 'Folder', settings: 'Settings',
@@ -88,13 +88,13 @@
       selectedLayer: 'Layer to edit', selectInput: 'Select an input',
       moveToFolder: 'Move to folder', destinationFolder: 'Destination', createFolderAndMove: 'Create a folder and move',
       parentFolder: 'Parent folder', newFolderName: 'New folder name', move: 'Move',
-      padSettings: 'Trackpad finger movement', padExplanation: 'Left and right are independent. Changing one does not change the other. Click and tap key bindings stay the same.',
+      padSettings: 'Trackpad finger movement', padExplanation: 'Left and right movement are independent. Set tap and press actions separately in the input list.',
       leftPadMove: 'Left pad movement', rightPadMove: 'Right pad movement', padOff: 'Off', padMouse: 'Move mouse', padScroll: 'Scroll',
       padMotionType: 'Finger movement', folderNotEmpty: 'The folder must be empty before deletion.',
       leftPadSensitivity: 'Left sensitivity (%)', rightPadSensitivity: 'Right sensitivity (%)',
       padSensitivityHelp: '100% is standard. Applies to mouse movement and scrolling.',
       invalidSensitivity: 'Enter sensitivity from 25 to 400%.',
-      leftStickSummary: 'Left stick tilt', dpadLinked: 'Uses D-pad bindings', stickLinked: 'Shared', stickInfo: 'L3/R3 clicks are separate basic buttons.',
+      stickInfo: 'Stick directions have separate bindings from the D-pad. L3/R3 clicks are basic buttons.',
       closeBehavior: 'Close button action', closeAsk: 'Ask every time', closeTray: 'Minimize to tray',
       closeExit: 'Exit', closeTitle: 'Close the app',
       closeExplanation: 'The app keeps running in the tray. Use its notification icon to reopen or exit.',
@@ -188,7 +188,7 @@
   }
   const esc = value => String(value).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
   const targetName = path => String(path).split(/[\\/]/).pop();
-  const englishButtons = {18:'Left pad click',19:'Left pad tap',20:'Right pad click',21:'Right pad tap',22:'Menu',23:'View',24:'Right stick ↑',25:'Right stick ↓',26:'Right stick ←',27:'Right stick →'};
+  const englishButtons = {18:'Left pad click',19:'Left pad tap',20:'Right pad click',21:'Right pad tap',22:'Menu',23:'View',24:'Right stick ↑',25:'Right stick ↓',26:'Right stick ←',27:'Right stick →',28:'Left stick ↑',29:'Left stick ↓',30:'Left stick ←',31:'Left stick →'};
   const buttonName = index => lang() === 'en' && englishButtons[index] ? englishButtons[index] : state.buttons[index].name;
   const englishStatus = {
     '停止中：Steam Inputを使用できます':'Stopped: Steam Input is available',
@@ -226,6 +226,7 @@
   const displayKey = code => {
     if (code === 0) return tr('disabled');
     if (code === 0xffffffff) return tr('inherit');
+    if (code >= 0x20001 && code <= 0x20003) return tr(['mouseLeft','mouseRight','mouseMiddle'][code - 0x20001]);
     const japanese = lang() === 'ja';
     const names = {0x1c:'Enter',0x1001c:japanese ? 'テンキー Enter' : 'Numpad Enter',
       0x39:'Space',0x01:'Esc',0x0f:'Tab',0x0e:'Backspace',
@@ -466,7 +467,7 @@
   function renderCategory() {
     const select = $('category'); const old = String(category); select.innerHTML = '';
     const all = document.createElement('option'); all.value = '-1'; all.textContent = tr('all'); select.append(all);
-    const englishCategories = ['Basic buttons','D-pad / left stick','Back buttons','Trackpads','Menu and View','Sticks'];
+    const englishCategories = ['Basic buttons','D-pad','Back buttons','Trackpads','Menu and View','Sticks'];
     state.categories.forEach((name,index) => { const option = document.createElement('option'); option.value = String(index); option.textContent = lang() === 'en' ? englishCategories[index] : name; select.append(option); });
     select.value = old;
   }
@@ -478,16 +479,12 @@
     $('right-pad-mode').value = String(current().rightPadMode);
     $('left-pad-sensitivity').value = String(current().leftPadSensitivity || 100);
     $('right-pad-sensitivity').value = String(current().rightPadSensitivity || 100);
+    $('left-pad-sensitivity-range').value = $('left-pad-sensitivity').value;
+    $('right-pad-sensitivity-range').value = $('right-pad-sensitivity').value;
     $('pad-dialog').hidden = false; $('left-pad-mode').focus();
   }
   function renderRows() {
     const host = $('rows'); host.innerHTML = '';
-    if (category === 5) {
-      const summary = document.createElement('div'); summary.className = 'input-row stick-summary';
-      summary.innerHTML = '<strong>' + esc(tr('leftStickSummary')) + '</strong><span>' +
-        esc(tr('dpadLinked')) + '</span><span class="kind">' + esc(tr('stickLinked')) + '</span>';
-      host.append(summary);
-    }
     if (category === -1 || category === 3) {
       for (const side of ['left','right']) {
         const row = document.createElement('button'); row.type = 'button'; row.className = 'input-row pad-mode-row';
@@ -504,7 +501,10 @@
     }
     $('stick-info').hidden = category !== 5;
     const layer = layerData();
-    state.buttons.forEach((button,index) => {
+    const buttonOrder = state.buttons.map((_, index) => index);
+    if (buttonOrder.length >= 32) buttonOrder.splice(24, 8, 28, 29, 30, 31, 24, 25, 26, 27);
+    buttonOrder.forEach(index => {
+      const button = state.buttons[index];
       if (category >= 0 && button.category !== category) return;
       const triggerLayer = current().layers.findIndex(item => item.trigger === index);
       if (state.editedLayer && triggerLayer >= 0) return;
@@ -513,6 +513,7 @@
       if (triggerLayer >= 0) { kind = tr('layerSwitch'); assignment = current().layers[triggerLayer].name || tr('layer') + (triggerLayer + 1); }
       else if (sequence.enabled) { kind = tr('sequence'); assignment = sequence.keys.map(displayKey).join(' → '); }
       else if (value === 0 || value === 0xffffffff) kind = value === 0 ? tr('disabled') : tr('inherit');
+      else if (value >= 0x20001 && value <= 0x20003) kind = tr('mouseButton');
       else if (turbo.enabled) kind = tr('turboLabel');
       const row = document.createElement('button'); row.type = 'button'; row.className = 'input-row'; row.dataset.button = String(index);
       row.innerHTML = '<strong>' + esc(buttonName(index)) + '</strong><span><span class="keycap">' + esc(assignment) + '</span></span><span class="kind">' + esc(kind) + '</span>';
@@ -601,8 +602,10 @@
     $('editor-layer').textContent = state.editedLayer === 0 ? tr('normal') : preset.layers[state.editedLayer - 1].name;
     $('edit-role').querySelector('[value=layer]').hidden = state.editedLayer !== 0;
     $('edit-role').querySelector('[value=inherit]').hidden = state.editedLayer === 0;
-    $('edit-role').value = trigger >= 0 ? 'layer' : sequence.enabled ? 'sequence' : value === 0 ? 'off' : value === 0xffffffff ? 'inherit' : 'key';
+    $('edit-role').querySelector('[value=mouse]').hidden = index < 18 || index > 21;
+    $('edit-role').value = trigger >= 0 ? 'layer' : sequence.enabled ? 'sequence' : value === 0 ? 'off' : value === 0xffffffff ? 'inherit' : value >= 0x20001 && value <= 0x20003 ? 'mouse' : 'key';
     capturedKey = value === 0xffffffff ? 0 : value;
+    $('edit-mouse-button').value = String(value >= 0x20001 && value <= 0x20003 ? value : 0x20001);
     $('edit-key').value = displayKey(capturedKey);
     $('edit-turbo').checked = turbo.enabled;
     $('edit-interval').value = String(turbo.intervalMs);
@@ -618,6 +621,7 @@
   function updateEditorRole() {
     const role = $('edit-role').value;
     $('edit-key-group').hidden = role !== 'key';
+    $('edit-mouse-group').hidden = role !== 'mouse';
     $('edit-sequence-group').hidden = role !== 'sequence';
     $('edit-layer-group').hidden = role !== 'layer';
     $('turbo-fields').hidden = !$('edit-turbo').checked;
@@ -698,6 +702,15 @@
     send('setPadConfig', $('left-pad-mode').value, $('right-pad-mode').value, left, right);
     close('pad-dialog');
   };
+  for (const side of ['left','right']) {
+    const range = $(`${side}-pad-sensitivity-range`);
+    const number = $(`${side}-pad-sensitivity`);
+    range.oninput = () => { number.value = range.value; };
+    number.oninput = () => {
+      const value = Number(number.value);
+      if (Number.isFinite(value)) range.value = String(Math.max(25, Math.min(400, value)));
+    };
+  }
   document.addEventListener('click', event => { if (!$('context-menu').contains(event.target)) hideContext(); });
   window.addEventListener('blur', clearHighlight);
   $('language').onchange = event => send('setLanguage', event.target.value);
@@ -745,8 +758,9 @@
     if (role === 'key' && (!capturedKey || capturedKey === 0xffffffff)) { toast(tr('capturePrompt')); return; }
     if (role === 'sequence' && !sequenceKeys.length) { toast(tr('addKey')); return; }
     if (interval < 20 || interval > 2000 || delay < 0 || delay > 5000 || seqInterval < 20 || seqInterval > 2000) return;
-    send('saveBinding', editingButton, state.editedLayer, role, capturedKey,
-      $('edit-turbo').checked ? 1 : 0, interval, delay, sequenceKeys.join(','), seqInterval,
+    send('saveBinding', editingButton, state.editedLayer, role,
+      role === 'mouse' ? $('edit-mouse-button').value : capturedKey,
+      role === 'key' && $('edit-turbo').checked ? 1 : 0, interval, delay, sequenceKeys.join(','), seqInterval,
       $('sequence-repeat').checked ? 1 : 0, $('edit-layer-target').value);
     close('editor');
   };

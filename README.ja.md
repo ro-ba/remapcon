@@ -9,7 +9,8 @@
 ## できること
 
 - 対象アプリごとにプリセットを作り、フォルダで整理する
-- ボタン、右スティックの各方向、左右トラックパッドの操作を設定する
+- ボタン、十字キー、左右スティックの各方向を別々に設定する
+- 左右トラックパッドの指移動、タップ、押し込みを設定する
 - レイヤーの切り替え、連打、複数キーの連続入力を設定する
 - 対象アプリが前面にあるとき、プリセットを自動で有効にする
 - プリセットをJSON形式でインポート・エクスポートする
@@ -38,7 +39,7 @@ Visual Studioの「C++によるデスクトップ開発」、Windows SDK、CMake
 
 ```bat
 cmake -S . -B build -G "Visual Studio 18 2026" -A x64
-cmake --build build --config Release --target Remapcon
+cmake --build build --config Release --target Remapcon RemapconUpdater
 ```
 
 実行ファイルは`build\Release\Remapcon.exe`に生成されます。ライセンス文書を含む配布用ZIPは`cpack --config build\CPackConfig.cmake -C Release -G ZIP`で作成できます。
