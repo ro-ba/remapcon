@@ -1,4 +1,6 @@
 #pragma once
 
 // Generated from ui/index.html, ui/style.css and ui/app.js by CMake.
-inline constexpr wchar_t kMapleUiHtml[] = LR"MAPLEUI(@MAPLE_UI_HTML@)MAPLEUI";
+inline constexpr const wchar_t* kMapleUiHtmlParts[] = {
+    LR"MAPLEUI(@MAPLE_UI_HTML@)MAPLEUI"
+};

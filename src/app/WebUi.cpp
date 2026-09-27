@@ -74,7 +74,9 @@ void WebUi::OnControllerReady(ICoreWebView2Controller* controller) {
                 }
                 return S_OK;
             }).Get(), &token);
-    webview_->NavigateToString(kMapleUiHtml);
+    std::wstring html;
+    for (const auto* part : kMapleUiHtmlParts) html += part;
+    webview_->NavigateToString(html.c_str());
 }
 
 void WebUi::Resize() {

@@ -37,7 +37,7 @@ file(READ "${CMAKE_CURRENT_SOURCE_DIR}/src/app/resources/remapcon.svg" APP_BRAND
 string(REPLACE "<!-- STYLE -->" "<style>${APP_UI_CSS}</style>" APP_UI_HTML "${APP_UI_HTML}")
 string(REPLACE "<!-- SCRIPT -->" "<script>${APP_UI_JS}</script>" APP_UI_HTML "${APP_UI_HTML}")
 string(REPLACE "<!-- BRAND_ICON -->" "${APP_BRAND_SVG}" APP_UI_HTML "${APP_UI_HTML}")
-set(MAPLE_UI_HTML "${APP_UI_HTML}")
+string(REPLACE "\n" "\n)MAPLEUI\",\n    LR\"MAPLEUI(" MAPLE_UI_HTML "${APP_UI_HTML}")
 configure_file(src/app/ui_embedded.h.in "${CMAKE_CURRENT_BINARY_DIR}/maple_ui_embedded.h" @ONLY)
 
 add_executable(Remapcon WIN32
