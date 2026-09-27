@@ -2054,7 +2054,7 @@ void ImportSettings(HWND window) {
                     MB_OK | MB_ICONERROR);
         return;
     }
-    ConfigSnapshot previous{language, closeBehavior, autoMode.load(), selectedPreset,
+    ConfigSnapshot previous{language, closeBehavior, autoMode.load(), steamSharedMode.load(), selectedPreset,
                             folders, presets};
     const bool previousRequested = requested.exchange(false);
     ApplyConfig(std::move(imported));
