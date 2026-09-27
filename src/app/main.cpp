@@ -477,12 +477,12 @@ struct StickDirections {
         const int32_t ax = std::abs(static_cast<int32_t>(x));
         const int32_t ay = std::abs(static_cast<int32_t>(y));
         const int64_t radiusSquared = static_cast<int64_t>(ax) * ax + static_cast<int64_t>(ay) * ay;
-        const int32_t release = std::max(0, static_cast<int32_t>(deadzone) - 1500);
+        const int32_t release = (std::max)(0, static_cast<int32_t>(deadzone) - 1500);
         const int32_t threshold = active ? release : static_cast<int32_t>(deadzone);
         active = radiusSquared >= static_cast<int64_t>(threshold) * threshold && (ax || ay);
         if (!active) { up = down = left = right = false; return; }
         const bool wasDiagonal = (up || down) && (left || right);
-        const bool diagonal = std::min(ax, ay) >= std::max(1500, std::max(ax, ay) / 10) &&
+        const bool diagonal = (std::min)(ax, ay) >= (std::max)(1500, (std::max)(ax, ay) / 10) &&
             std::abs(ax - ay) <= static_cast<int32_t>(overlap) + (wasDiagonal ? 700 : 0);
         const bool horizontal = ax >= ay || diagonal;
         const bool vertical = ay >= ax || diagonal;
