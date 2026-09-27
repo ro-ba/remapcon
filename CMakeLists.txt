@@ -58,3 +58,14 @@ target_link_libraries(Remapcon PRIVATE
 if(MSVC)
     target_compile_options(Remapcon PRIVATE /W4 /WX /utf-8)
 endif()
+
+install(TARGETS Remapcon RUNTIME DESTINATION .)
+install(FILES LICENSE README.md README.ja.md THIRD_PARTY_NOTICES.md DESTINATION .)
+install(FILES LICENSES/WebView2-LICENSE.txt LICENSES/WebView2-NOTICE.txt
+    DESTINATION LICENSES)
+
+set(CPACK_GENERATOR ZIP)
+set(CPACK_PACKAGE_NAME Remapcon)
+set(CPACK_PACKAGE_VERSION 1.0.0)
+set(CPACK_PACKAGE_FILE_NAME "Remapcon-Windows-${WV2_ARCH}")
+include(CPack)

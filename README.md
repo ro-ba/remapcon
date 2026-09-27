@@ -21,6 +21,7 @@ The icon is original, stylized artwork; it does not contain a Valve logo.
 
 - Windows 10 or 11 and a 2026 Steam Controller.
 - [Microsoft Edge WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/).
+- [Microsoft Visual C++ Redistributable (x64)](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist) for the prebuilt executable.
 - Administrator mode may be required for an elevated target app to receive input.
 
 Close Steam before enabling Steamless Mode if it is using the controller.
@@ -39,6 +40,16 @@ cmake --build build --config Release --target Remapcon
 
 For Visual Studio 2022, use `Visual Studio 17 2022` as the generator. The
 executable is `build\Release\Remapcon.exe`.
+After building, create a portable ZIP containing the executable and required
+license files with:
+
+```bat
+cpack --config build\CPackConfig.cmake -C Release -G ZIP
+```
+
+Extract `Remapcon-Windows-x64.zip` and run `Remapcon.exe`. The ZIP does not
+bundle Microsoft runtime installers; install missing prerequisites using the
+links above.
 
 Settings are stored in `%LOCALAPPDATA%\Remapcon\ControllerSettings.json`.
 On first launch, the app copies existing settings from

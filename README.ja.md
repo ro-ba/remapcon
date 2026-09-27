@@ -18,6 +18,7 @@ SteamおよびSteam ControllerはValve Corporationの商標です。アイコン
 ## 動作・ビルド
 
 Windows 10/11、2026年版Steam Controller、[Microsoft Edge WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/)が必要です。
+配布版のEXEには[Microsoft Visual C++ 再頒布可能パッケージ（x64）](https://learn.microsoft.com/ja-jp/cpp/windows/latest-supported-vc-redist)も必要です。
 対象アプリが管理者権限の場合はRemapconも管理者として実行する必要があります。
 Steamがコントローラーを使用中なら、Steamを終了してからSteamless Modeを有効にしてください。
 仮想ゲームパッドドライバーは使用しません。
@@ -32,6 +33,15 @@ cmake --build build --config Release --target Remapcon
 
 Visual Studio 2022ではジェネレーターを`Visual Studio 17 2022`に変更します。
 実行ファイルは`build\Release\Remapcon.exe`です。
+ライセンス表示を含む配布用ZIPは、ビルド後に次のコマンドで作れます。
+
+```bat
+cpack --config build\CPackConfig.cmake -C Release -G ZIP
+```
+
+生成された`Remapcon-Windows-x64.zip`を展開して`Remapcon.exe`を起動します。
+ZIPにはMicrosoftのランタイムインストーラーを同梱していません。必要な場合は
+上記のリンクから入手してください。
 設定は`%LOCALAPPDATA%\Remapcon\ControllerSettings.json`に保存します。
 以前の`%LOCALAPPDATA%\SteamlessController`に設定がある場合は初回起動時に
 読み取り、元のファイルは残します。
