@@ -28,6 +28,8 @@
       duplicateName: '同じ名前が使われています。', invalidName: '名前を入力してください。',
       deletePresetTitle: 'プリセットを削除', deleteLayerTitle: 'レイヤーを削除',
       deleteFolderTitle: 'フォルダを削除', deletePrompt: '「{name}」を削除しますか？',
+      clearTargetTitle: '対象アプリの指定を解除',
+      clearTargetPrompt: '「{name}」の指定を解除しますか？ボタンの割り当ては残ります。',
       importTitle: '設定をインポート', importPrompt: '現在の設定をバックアップしてから、選択した設定で置き換えます。',
       nextLayer: '切り替え先', turboLabel: '連打',
       selectedLayer: '編集するレイヤー', selectInput: '入力を選択',
@@ -73,6 +75,8 @@
       duplicateName: 'This name is already used.', invalidName: 'Enter a name.',
       deletePresetTitle: 'Delete preset', deleteLayerTitle: 'Delete layer',
       deleteFolderTitle: 'Delete folder', deletePrompt: 'Delete “{name}”?',
+      clearTargetTitle: 'Clear target app',
+      clearTargetPrompt: 'Clear “{name}” as the target app? Button mappings will remain.',
       importTitle: 'Import settings', importPrompt: 'The current settings will be backed up, then replaced with the selected settings.',
       nextLayer: 'Switch to', turboLabel: 'Turbo',
       selectedLayer: 'Layer to edit', selectInput: 'Select an input',
@@ -288,11 +292,14 @@
     pendingDelete = {command, target, name, presetIndex: state.selectedPreset, layerIndex: state.editedLayer};
     const title = command === 'deletePreset' ? 'deletePresetTitle' :
       command === 'layer-delete' ? 'deleteLayerTitle' :
-      command === 'resetBinding' ? 'resetBindingTitle' : 'deleteFolderTitle';
+      command === 'resetBinding' ? 'resetBindingTitle' :
+      command === 'clearTarget' ? 'clearTargetTitle' : 'deleteFolderTitle';
     $('delete-title').textContent = tr(title);
     $('delete-explanation').textContent = command === 'resetBinding' ? tr('resetLayerPrompt') :
-      tr('deletePrompt').replace('{name}', name);
-    $('delete-confirm').textContent = command === 'resetBinding' ? tr('resetBinding') : tr('delete');
+      tr(command === 'clearTarget' ? 'clearTargetPrompt' : 'deletePrompt').replace('{name}', name);
+    $('delete-confirm').textContent = command === 'resetBinding' ? tr('resetBinding') :
+      command === 'clearTarget' ? tr('clear') : tr('delete');
+    $('delete-confirm').classList.toggle('danger-confirm', command === 'clearTarget');
     $('delete-dialog').hidden = false;
     $('delete-cancel').focus();
   }
@@ -503,6 +510,7 @@
     $('preset-path').textContent = current().folder;
     $('target-name').textContent = current().target ? targetName(current().target) : tr('unset');
     $('target-name').title = current().target || '';
+    $('target-clear').disabled = !current().target;
     renderTargetIcon();
     $('auto').checked = state.autoMode;
     clearHighlight();
@@ -595,6 +603,7 @@
     const stillMatches = command === 'resetBinding' ?
       state.selectedPreset === presetIndex && state.editedLayer === pendingDelete.layerIndex &&
       target >= 0 && target < state.buttons.length :
+      command === 'clearTarget' ? state.selectedPreset === presetIndex && current().target === target :
       command === 'deletePreset' ? state.presets[target]?.name === name :
       command === 'layer-delete' ? state.selectedPreset === presetIndex && current()?.layers[target]?.name === name :
       state.folders.includes(target) && !state.folders.some(folder => folder.startsWith(target + '/')) &&
@@ -602,6 +611,7 @@
     close('delete-dialog');
     if (stillMatches) {
       if (command === 'resetBinding') send(command, target, layerIndex, presetIndex);
+      else if (command === 'clearTarget') send(command);
       else send(command, target);
     }
   };
@@ -609,7 +619,9 @@
   $('preset-new').onclick = () => openName('preset-new','');
   $('folder-new').onclick = () => openName('folder-new','');
   $('target-pick').onclick = () => send('pickTarget');
-  $('target-clear').onclick = () => send('clearTarget');
+  $('target-clear').onclick = () => {
+    if (state && current().target) openDeleteDialog('clearTarget', current().target, targetName(current().target));
+  };
   $('auto').onchange = event => send('setAuto', event.target.checked ? 1 : 0);
   $('mode').onclick = () => send('toggleMode');
   $('preview').onclick = () => { if (state.preview) clearHighlight(); send('setPreview', state.preview ? 0 : 1); };

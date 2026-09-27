@@ -171,7 +171,11 @@ h3 { margin: 17px 0 8px; font-size: 14px; }
 #target-clear { color: #f5bec7; border-color: #925063; background: #442b38; transition: color .12s ease, border-color .12s ease, background-color .12s ease, box-shadow .12s ease; }
 #target-clear:hover, #target-clear:focus-visible { color: #fff; border-color: #e27791; background: #a03c59; box-shadow: 0 0 0 2px rgba(226,119,145,.18); }
 .update-status { min-height: 18px; margin: 10px 0 0; line-height: 1.5; }
+.update-status[data-state="current"] { display: flex; align-items: center; gap: 8px; color: #b7ecc9; }
+.update-status[data-state="current"]::before { content: '✓'; display: inline-grid; flex: 0 0 18px; width: 18px; height: 18px; place-items: center; border: 1px solid #71bd8d; border-radius: 50%; background: #28503a; color: #d5ffe1; font-size: 12px; font-weight: 700; line-height: 1; }
 .update-status[data-state="available"] { color: #d7b5ff; }
 .update-status[data-state="error"] { color: #f0adb7; }
+.primary.danger-confirm { border-color: #a94a61; background: #a03c59; }
+.primary.danger-confirm:hover, .primary.danger-confirm:focus-visible { border-color: #e27791; background: #bc4566; }
 body:not(.ui-ready) #app { visibility: hidden; }
 body:not(.ui-ready)::after { content: '読み込み中…'; position: fixed; inset: 0; display: grid; place-items: center; color: #bdb4c6; background: #1b1922; font-size: 13px; }
