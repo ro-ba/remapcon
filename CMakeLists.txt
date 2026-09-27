@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(Remapcon LANGUAGES CXX)
+project(Remapcon VERSION 0.1.0 LANGUAGES CXX)
 
 include(FetchContent)
 set(CMAKE_CXX_STANDARD 20)
@@ -66,6 +66,6 @@ install(FILES LICENSES/WebView2-LICENSE.txt LICENSES/WebView2-NOTICE.txt
 
 set(CPACK_GENERATOR ZIP)
 set(CPACK_PACKAGE_NAME Remapcon)
-set(CPACK_PACKAGE_VERSION 1.0.0)
+set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
 set(CPACK_PACKAGE_FILE_NAME "Remapcon-Windows-${WV2_ARCH}")
 include(CPack)
