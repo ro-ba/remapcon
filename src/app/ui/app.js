@@ -157,7 +157,8 @@
       tr('update' + updateStatus[0].toUpperCase() + updateStatus.slice(1))
         .replace('{version}', latestVersion);
     $('check-updates').disabled = updateStatus === 'checking' || updateStatus === 'installing';
-    const available = updateStatus === 'available' || updateStatus === 'installError';
+    const available = updateStatus === 'available' ||
+      (updateStatus === 'installError' && updateFailure !== 'updateReleaseError');
     $('open-release').hidden = !available;
     $('install-update').hidden = !available;
   }

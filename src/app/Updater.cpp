@@ -6,6 +6,7 @@
 #include <climits>
 #include <cstdint>
 #include <filesystem>
+#include <fstream>
 #include <string>
 #include <vector>
 #include "SimpleJson.h"
@@ -219,11 +220,42 @@ void NotifyFailure(HWND window, UpdateFailure reason) {
                                        static_cast<WPARAM>(reason), 0);
 }
 
+int VerifyArchive(const fs::path& archive, const std::string& expected) {
+    if (expected.size() != 64) return 1;
+    std::error_code error;
+    const auto size = fs::file_size(archive, error);
+    if (error || size == 0 || size > MaxPackage) return 1;
+    std::vector<unsigned char> bytes(static_cast<size_t>(size));
+    std::ifstream input(archive, std::ios::binary);
+    if (!input.read(reinterpret_cast<char*>(bytes.data()),
+                    static_cast<std::streamsize>(bytes.size()))) return 1;
+    std::string actual;
+    if (!Sha256(bytes, actual) || actual != expected) return 1;
+    const fs::path destination = archive.parent_path() / L"remapcon-verify-extracted";
+    fs::create_directories(destination, error);
+    if (error) return 1;
+    const bool okay = Extract(archive, destination) &&
+        fs::is_regular_file(destination / L"Remapcon-Windows-x64" / L"Remapcon.exe", error) &&
+        fs::is_regular_file(destination / L"Remapcon-Windows-x64" / L"RemapconUpdater.exe", error);
+    fs::remove_all(destination, error);
+    return okay ? 0 : 1;
+}
+
 } // namespace
 
 int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
     int count = 0;
     LPWSTR* arguments = CommandLineToArgvW(GetCommandLineW(), &count);
+    if (arguments && count == 4 && wcscmp(arguments[1], L"--verify-archive") == 0) {
+        const fs::path archive(arguments[2]);
+        std::string digest;
+        for (const wchar_t* ch = arguments[3]; *ch; ++ch) {
+            if (*ch < L'0' || *ch > L'f') { LocalFree(arguments); return 1; }
+            digest.push_back(static_cast<char>(*ch));
+        }
+        LocalFree(arguments);
+        return VerifyArchive(archive, digest);
+    }
     if (!arguments || count != 6) {
         if (arguments) LocalFree(arguments);
         return 1;
