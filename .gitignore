@@ -1,14 +1,40 @@
 build/
+out/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
 .vs/
+.vscode/
+.idea/
+Debug/
+Release/
+x64/
 *.user
 *.suo
+*.sln
+*.slnx
+*.vcxproj
+*.vcxproj.filters
 *.pdb
 *.ilk
 *.obj
 *.exe
 *.dll
 *.lib
+*.log
+*.tmp
+Thumbs.db
+.DS_Store
 Output/
+
+# Local settings and discovered application icons may contain private paths.
+ControllerSettings.json
+WindowPlacement.ini
+TargetIcons/
+.env
+.env.*
+!.env.example
 
 # Local checkout of the upstream project; the standalone source lives at the repository root.
 upstream-source/
