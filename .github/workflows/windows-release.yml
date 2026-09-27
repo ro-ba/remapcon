@@ -53,5 +53,4 @@ jobs:
         run: >-
           gh release create $env:GITHUB_REF_NAME Remapcon-Windows-x64.zip
           --verify-tag --title "Remapcon $env:GITHUB_REF_NAME"
-          --notes "First public preview. Extract the ZIP and run Remapcon.exe. Microsoft Edge WebView2 Runtime and Visual C++ Redistributable (x64) may be required."
-          --prerelease
+          --notes "Portable Windows x64 build. Extract the ZIP and run Remapcon.exe. Microsoft Edge WebView2 Runtime and Visual C++ Redistributable (x64) may be required."
