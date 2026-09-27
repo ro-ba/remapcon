@@ -221,6 +221,10 @@
     '自動待機中：対象アプリを前面にすると有効になります':'Waiting for the target app',
     'コントローラー待機中：接続を確認してください':'Waiting for the controller',
     '取得できません：Steamなどが使用中です':'Controller is in use by Steam or another app',
+    '排他取得に失敗しました：20秒後に再試行します':'Exclusive claim failed: retrying in 20 seconds',
+    'Steamからコントローラーを切り替え中です':'Switching controller from Steam',
+    'Steamへコントローラーを返しています':'Returning controller to Steam',
+    'Steamへの切り替えを確認できませんでした':'Could not confirm return to Steam',
     'Lizard Modeを無効化できませんでした':'Could not disable Lizard Mode',
     '自動有効：対象アプリへ入力します':'Auto mode active in target app',
     '有効：ボタン入力待ちです':'Active: waiting for controller input',
@@ -237,11 +241,19 @@
     const labels = lang() === 'en' ? {
       '停止中':'Stopped','自動待機中':'Auto standby','コントローラー待機中':'Waiting',
       '取得できません':'Unavailable','自動有効':'Auto active','有効':'Active',
+      '排他取得に失敗しました':'Claim failed',
+      'Steamからコントローラーを切り替え中です':'Switching',
+      'Steamへコントローラーを返しています':'Returning',
+      'Steamへの切り替えを確認できませんでした':'Return failed',
       '入力確認中':'Input test','通信が切れました':'Disconnected',
       '入力送信に失敗':'Send failed','ボタン入力を検出':'Input sent'
     } : {
       '停止中':'停止中','自動待機中':'自動待機中','コントローラー待機中':'接続待ち',
       '取得できません':'取得不可','自動有効':'自動有効','有効':'有効',
+      '排他取得に失敗しました':'取得失敗',
+      'Steamからコントローラーを切り替え中です':'切り替え中',
+      'Steamへコントローラーを返しています':'返却中',
+      'Steamへの切り替えを確認できませんでした':'返却失敗',
       '入力確認中':'入力確認中','通信が切れました':'切断',
       '入力送信に失敗':'送信失敗','ボタン入力を検出':'入力送信済み'
     };

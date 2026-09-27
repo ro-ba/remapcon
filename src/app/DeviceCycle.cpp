@@ -34,6 +34,16 @@ bool IsDisabled(const std::wstring& id) {
            (status & DN_HAS_PROBLEM) && problem == CM_PROB_DISABLED;
 }
 
+bool IsEnabled(const std::wstring& id) {
+    if (id.empty()) return true;
+    DEVINST node = 0;
+    if (CM_Locate_DevNodeW(&node, const_cast<DEVINSTID_W>(id.c_str()),
+                           CM_LOCATE_DEVNODE_NORMAL) != CR_SUCCESS) return false;
+    ULONG status = 0, problem = 0;
+    return CM_Get_DevNode_Status(&status, &problem, node, 0) == CR_SUCCESS &&
+           (status & DN_HAS_PROBLEM) == 0;
+}
+
 std::wstring IdOf(DEVINST node) {
     wchar_t id[MAX_DEVICE_ID_LEN]{};
     if (CM_Get_Device_IDW(node, id, MAX_DEVICE_ID_LEN, 0) != CR_SUCCESS) return {};
@@ -67,19 +77,19 @@ std::wstring ReadPending(HKEY key, const wchar_t* name) {
 }
 
 bool EnableNode(const std::wstring& id) {
-    if (id.empty() || !IsDisabled(id)) return true;
+    if (IsEnabled(id)) return true;
     HDEVINFO devices = SetupDiCreateDeviceInfoList(nullptr, nullptr);
     if (devices == INVALID_HANDLE_VALUE) return false;
     SP_DEVINFO_DATA data{};
     data.cbSize = sizeof(data);
     bool opened = SetupDiOpenDeviceInfoW(devices, id.c_str(), nullptr, 0, &data) != 0;
-    for (int attempt = 0; opened && attempt < 3 && IsDisabled(id); ++attempt) {
+    for (int attempt = 0; opened && attempt < 3 && !IsEnabled(id); ++attempt) {
         ChangeState(devices, data, DICS_ENABLE, DICS_FLAG_GLOBAL);
-        if (IsDisabled(id)) ChangeState(devices, data, DICS_ENABLE, DICS_FLAG_CONFIGSPECIFIC);
-        if (IsDisabled(id)) Sleep(250);
+        if (!IsEnabled(id)) ChangeState(devices, data, DICS_ENABLE, DICS_FLAG_CONFIGSPECIFIC);
+        if (!IsEnabled(id)) Sleep(250);
     }
     SetupDiDestroyDeviceInfoList(devices);
-    return opened && !IsDisabled(id);
+    return opened && IsEnabled(id);
 }
 
 bool RecoverPending() {
@@ -159,7 +169,25 @@ int RunDeviceCycleCommand() {
     int count = 0;
     LPWSTR* args = CommandLineToArgvW(GetCommandLineW(), &count);
     if (!args) return 1;
-    int result = -1;
+    const bool helper = count >= 2 &&
+        (wcscmp(args[1], L"--recover-device-cycle") == 0 ||
+         wcscmp(args[1], L"--device-cycle") == 0);
+    if (!helper) {
+        LocalFree(args);
+        return -1;
+    }
+    HANDLE mutex = CreateMutexW(nullptr, FALSE, L"Local\\RemapconDeviceCycle");
+    if (!mutex) {
+        LocalFree(args);
+        return 7;
+    }
+    const DWORD lock = WaitForSingleObject(mutex, 15000);
+    if (lock != WAIT_OBJECT_0 && lock != WAIT_ABANDONED) {
+        CloseHandle(mutex);
+        LocalFree(args);
+        return 7;
+    }
+    int result = 1;
     if (count == 2 && wcscmp(args[1], L"--recover-device-cycle") == 0) {
         result = RecoverPending() ? 0 : 5;
     } else if (count == 4 && wcscmp(args[1], L"--device-cycle") == 0) {
@@ -169,6 +197,8 @@ int RunDeviceCycleCommand() {
             result = Cycle(args[2], reinterpret_cast<HANDLE>(static_cast<ULONG_PTR>(value)));
         else result = 1;
     }
+    ReleaseMutex(mutex);
+    CloseHandle(mutex);
     LocalFree(args);
     return result;
 }

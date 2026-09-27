@@ -460,7 +460,7 @@ bool TakeControllerFromSteam(SteamController& controller, const std::wstring& pa
     DeviceCycleProcess cycle;
     if (!StartDeviceCycle(path, cycle)) return false;
     HANDLE waitHandles[] = {cycle.downEvent, cycle.process};
-    const DWORD down = WaitForMultipleObjects(2, waitHandles, FALSE, 6000);
+    const DWORD down = WaitForMultipleObjects(2, waitHandles, FALSE, 12000);
     if (down != WAIT_OBJECT_0) {
         FinishDeviceCycle(cycle, 6000);
         return false;
@@ -950,6 +950,7 @@ void ControllerLoop() {
     if (speedSetting > 31) speedSetting = 31;
     const auto repeatDelay = std::chrono::milliseconds(250 * (delaySetting + 1));
     const auto repeatInterval = std::chrono::milliseconds(62000 / (155 + 55 * speedSetting));
+    std::wstring steamTakenPath;
     try {
         bool announcedStopped = false;
         bool lastIdleWasAuto = false;
@@ -988,17 +989,22 @@ void ControllerLoop() {
             }
             if (!ShouldHoldController()) { controller.Close(); continue; }
             const auto claim = controller.ClaimGameModeAccess();
+            bool attemptedTakeover = false;
             if (claim != SteamController::AccessClaim::Exclusive &&
                 steamTakeover.load() && autoMode.load() && processElevated &&
                 IsTargetForeground() && Clock::now() >= retryTakeoverAfter) {
+                attemptedTakeover = true;
                 controller.Close();
                 SetStatus(L"Steamからコントローラーを切り替え中です");
                 tookFromSteam = TakeControllerFromSteam(controller, controllerPath);
+                if (tookFromSteam) steamTakenPath = controllerPath;
                 if (!tookFromSteam)
                     retryTakeoverAfter = Clock::now() + std::chrono::seconds(20);
             }
             if (claim != SteamController::AccessClaim::Exclusive && !tookFromSteam) {
-                SetStatus(L"取得できません：Steamなどが使用中です");
+                SetStatus(attemptedTakeover ?
+                    L"排他取得に失敗しました：20秒後に再試行します" :
+                    L"取得できません：Steamなどが使用中です");
                 controller.Close();
                 std::this_thread::sleep_for(std::chrono::seconds(1));
                 continue;
@@ -1007,6 +1013,7 @@ void ControllerLoop() {
                 controller.EnableLizardMode();
                 controller.Close();
                 if (tookFromSteam) ReturnControllerToSteam(controllerPath);
+                steamTakenPath.clear();
                 SetStatus(L"Lizard Modeを無効化できませんでした");
                 std::this_thread::sleep_for(std::chrono::seconds(1));
                 continue;
@@ -1135,6 +1142,7 @@ void ControllerLoop() {
                 SetStatus(L"Steamへコントローラーを返しています");
                 if (!ReturnControllerToSteam(controllerPath))
                     SetStatus(L"Steamへの切り替えを確認できませんでした");
+                steamTakenPath.clear();
             }
             if (mainWindow) PostMessageW(mainWindow, WM_CONTROLLER_INPUT, 0, 0);
             if (mainWindow) { PostMessageW(mainWindow, WM_STICK_INPUT, 0, 0); PostMessageW(mainWindow, WM_STICK_INPUT, 1, 0); }
@@ -1145,6 +1153,7 @@ void ControllerLoop() {
         ReleaseAll(held, active);
         if (controller.IsOpen()) controller.EmergencyLizardRestore();
         controller.Close();
+        if (!steamTakenPath.empty()) ReturnControllerToSteam(steamTakenPath);
         SetStatus(L"予期しないエラー：アプリを再起動してください");
         requested = false;
     }
