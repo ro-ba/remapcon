@@ -11,6 +11,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <cwchar>
+#include <filesystem>
 #include <iterator>
 #include <map>
 #include <mutex>
@@ -25,6 +26,7 @@
 #include "SimpleJson.h"
 #include "WebUi.h"
 #include "resources/resource.h"
+#include "UpdateProtocol.h"
 
 namespace {
 
@@ -234,6 +236,7 @@ bool capturing = false;
 bool sequenceCapturing = false;
 bool sequenceAccepted = false;
 std::wstring settingsPath;
+bool updateInProgress = false;
 
 bool IsProcessElevated() {
     HANDLE token = nullptr;
@@ -1987,8 +1990,71 @@ void ShowPopup(HWND window, HWND button, bool targetMenu) {
 
 bool HideToTray(HWND window);
 void ForceExit(HWND window);
+bool StartUpdate(const std::wstring& tag);
 
 #include "WebBridge.inc"
+
+bool ValidUpdateTag(const std::wstring& tag) {
+    if (tag.size() < 7 || tag.size() > 32 || tag[0] != L'v') return false;
+    int dots = 0;
+    bool digit = false;
+    for (size_t i = 1; i < tag.size(); ++i) {
+        if (tag[i] == L'.') {
+            if (!digit || ++dots > 2) return false;
+            digit = false;
+        } else if (tag[i] >= L'0' && tag[i] <= L'9') digit = true;
+        else return false;
+    }
+    return dots == 2 && digit;
+}
+
+bool CanWriteDirectory(const std::filesystem::path& directory) {
+    const auto probe = directory / (L".remapcon-update-" + std::to_wstring(GetCurrentProcessId()));
+    HANDLE file = CreateFileW(probe.c_str(), GENERIC_WRITE | DELETE, 0, nullptr, CREATE_NEW,
+        FILE_ATTRIBUTE_TEMPORARY | FILE_FLAG_DELETE_ON_CLOSE, nullptr);
+    if (file == INVALID_HANDLE_VALUE) return false;
+    CloseHandle(file);
+    return true;
+}
+
+bool StartUpdate(const std::wstring& tag) {
+    if (updateInProgress || !ValidUpdateTag(tag)) return false;
+    wchar_t executable[MAX_PATH]{};
+    const DWORD size = GetModuleFileNameW(nullptr, executable, MAX_PATH);
+    if (!size || size >= MAX_PATH) return false;
+    const std::filesystem::path install = std::filesystem::path(executable).parent_path();
+    wchar_t tempRoot[MAX_PATH]{};
+    const DWORD tempLength = GetTempPathW(MAX_PATH, tempRoot);
+    if (!tempLength || tempLength >= MAX_PATH) return false;
+    wchar_t tempName[MAX_PATH]{};
+    if (!GetTempFileNameW(tempRoot, L"rmu", 0, tempName) ||
+        !DeleteFileW(tempName) || !CreateDirectoryW(tempName, nullptr)) return false;
+    const std::filesystem::path temporary(tempName);
+    const auto updater = temporary / L"RemapconUpdater.exe";
+    if (!CopyFileW((install / L"RemapconUpdater.exe").c_str(), updater.c_str(), TRUE)) {
+        RemoveDirectoryW(temporary.c_str());
+        return false;
+    }
+    const std::wstring parameters = std::to_wstring(GetCurrentProcessId()) + L" " +
+        std::to_wstring(reinterpret_cast<uintptr_t>(mainWindow)) + L" \"" +
+        install.wstring() + L"\" \"" + temporary.wstring() + L"\" " + tag;
+    SHELLEXECUTEINFOW launch{sizeof(launch)};
+    launch.fMask = SEE_MASK_NOCLOSEPROCESS;
+    launch.hwnd = mainWindow;
+    launch.lpVerb = CanWriteDirectory(install) ? L"open" : L"runas";
+    launch.lpFile = updater.c_str();
+    launch.lpParameters = parameters.c_str();
+    launch.lpDirectory = temporary.c_str();
+    launch.nShow = SW_HIDE;
+    if (!ShellExecuteExW(&launch)) {
+        DeleteFileW(updater.c_str());
+        RemoveDirectoryW(temporary.c_str());
+        return false;
+    }
+    if (launch.hProcess) CloseHandle(launch.hProcess);
+    updateInProgress = true;
+    return true;
+}
 
 NOTIFYICONDATAW TrayIconData(HWND window) {
     NOTIFYICONDATAW data{};
@@ -2149,6 +2215,15 @@ LRESULT CALLBACK MainProc(HWND window, UINT message, WPARAM wParam, LPARAM lPara
         webUi.SendJson(L"{\"type\":\"status\",\"text\":" +
                        JsonString(reinterpret_cast<const wchar_t*>(lParam)) + L"}");
         return 0;
+    case WM_REMAPCON_UPDATE_FAILED:
+        updateInProgress = false;
+        if (webReady) webUi.SendJson(L"{\"type\":\"updateInstallError\",\"code\":" +
+                                   std::to_wstring(wParam) + L"}");
+        return 0;
+    case WM_REMAPCON_UPDATE_READY:
+        if (!updateInProgress) return 0;
+        ForceExit(window);
+        return 1;
     case WM_CONTROLLER_INPUT:
         if (webReady) {
             std::wstring json = L"{\"type\":\"input\",\"buttons\":[";

@@ -226,6 +226,11 @@ void OnWebMessage(const std::wstring& raw) {
             webUi.SendJson(L"{\"type\":\"updateOpenError\"}");
         return;
     }
+    if (command == L"installUpdate") {
+        if (!StartUpdate(arg(1)))
+            webUi.SendJson(L"{\"type\":\"updateInstallError\",\"code\":6}");
+        return;
+    }
     bool okay = false;
     if (command == L"selectPreset") {
         uint32_t index = 0;

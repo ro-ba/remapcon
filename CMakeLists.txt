@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(Remapcon VERSION 1.1.1 LANGUAGES CXX)
+project(Remapcon VERSION 1.2.0 LANGUAGES CXX)
 
 include(FetchContent)
 set(CMAKE_CXX_STANDARD 20)
@@ -46,6 +46,7 @@ add_executable(Remapcon WIN32
     src/app/SettingsJson.inc
     src/app/SimpleJson.h
     src/app/WebBridge.inc
+    src/app/UpdateProtocol.h
     src/app/TargetIcon.cpp
     src/app/WebUi.cpp
     src/app/resources/app.rc
@@ -60,7 +61,18 @@ if(MSVC)
     target_compile_options(Remapcon PRIVATE /W4 /WX /utf-8)
 endif()
 
+add_executable(RemapconUpdater WIN32
+    src/app/Updater.cpp
+    src/app/SimpleJson.h
+    src/app/UpdateProtocol.h
+)
+target_link_libraries(RemapconUpdater PRIVATE winhttp bcrypt shell32)
+if(MSVC)
+    target_compile_options(RemapconUpdater PRIVATE /W4 /WX /utf-8)
+endif()
+
 install(TARGETS Remapcon RUNTIME DESTINATION .)
+install(TARGETS RemapconUpdater RUNTIME DESTINATION .)
 install(FILES LICENSE README.md README.ja.md THIRD_PARTY_NOTICES.md DESTINATION .)
 install(FILES LICENSES/WebView2-LICENSE.txt LICENSES/WebView2-NOTICE.txt
     DESTINATION LICENSES)

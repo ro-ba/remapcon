@@ -54,6 +54,12 @@
       updateCurrent: '最新版を使用しています。', updateAhead: '公開版より新しいビルドを使用しています。',
       updateError: '確認できませんでした。ネット接続を確認して、もう一度お試しください。',
       updateOpenError: 'リリースページを開けませんでした。',
+      installUpdate: '更新して再起動', updateConfirmTitle: '更新して再起動',
+      updateConfirmText: 'Remapcon {version} をダウンロードして検証します。準備ができたらアプリを終了し、更新後に再起動します。',
+      updateInstalling: '更新ファイルをダウンロード・検証しています。完了後に再起動します…',
+      updateInstallError: '更新に失敗しました。もう一度お試しいただくか、リリースページから手動で更新してください。',
+      updateChecksumError: 'ダウンロードしたZIPのSHA-256が一致しません。更新は中止しました。',
+      updateReleaseError: '最新版が変わりました。もう一度「更新を確認」を押してください。',
     },
     en: {
       inputTest: 'Find button', inputTestHelp: 'Press a controller button to highlight its settings row. No key input is sent while checking.',
@@ -101,6 +107,12 @@
       updateCurrent: 'You are using the latest version.', updateAhead: 'This build is newer than the public release.',
       updateError: 'Could not check for updates. Check your connection and try again.',
       updateOpenError: 'Could not open the release page.',
+      installUpdate: 'Update and restart', updateConfirmTitle: 'Update and restart',
+      updateConfirmText: 'Download and verify Remapcon {version}. When ready, the app will close, update, and restart.',
+      updateInstalling: 'Downloading and verifying the update. The app will restart when ready…',
+      updateInstallError: 'Update failed. Try again or update manually from the release page.',
+      updateChecksumError: 'The ZIP SHA-256 did not match. The update was stopped.',
+      updateReleaseError: 'The latest release changed. Check for updates again.',
     },
   };
   let state = null;
@@ -120,6 +132,7 @@
   let warningDismissed = false;
   let updateStatus = 'idle';
   let latestVersion = '';
+  let updateFailure = '';
   const openFolders = new Set();
   const targetIcons = new Map();
   const requestedIcons = new Set();
@@ -140,13 +153,16 @@
     const status = $('update-status');
     status.dataset.state = updateStatus;
     status.textContent = updateStatus === 'idle' ? '' :
+      updateStatus === 'installError' ? tr(updateFailure || 'updateInstallError') :
       tr('update' + updateStatus[0].toUpperCase() + updateStatus.slice(1))
         .replace('{version}', latestVersion);
-    $('check-updates').disabled = updateStatus === 'checking';
-    $('open-release').hidden = updateStatus !== 'available';
+    $('check-updates').disabled = updateStatus === 'checking' || updateStatus === 'installing';
+    const available = updateStatus === 'available' || updateStatus === 'installError';
+    $('open-release').hidden = !available;
+    $('install-update').hidden = !available;
   }
   async function checkUpdates() {
-    if (updateStatus === 'checking') return;
+    if (updateStatus === 'checking' || updateStatus === 'installing') return;
     updateStatus = 'checking'; renderUpdateStatus();
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000);
@@ -209,14 +225,34 @@
   const displayKey = code => {
     if (code === 0) return tr('disabled');
     if (code === 0xffffffff) return tr('inherit');
-    const names = {0x1c:'Enter',0x39:'Space',0x01:'Esc',0x0f:'Tab',
-      0x1004b:'←',0x1004d:'→',0x10048:'↑',0x10050:'↓',0x0e:'Backspace'};
+    const japanese = lang() === 'ja';
+    const names = {0x1c:'Enter',0x1001c:japanese ? 'テンキー Enter' : 'Numpad Enter',
+      0x39:'Space',0x01:'Esc',0x0f:'Tab',0x0e:'Backspace',
+      0x1004b:'←',0x1004d:'→',0x10048:'↑',0x10050:'↓',
+      0x10053:'Delete',0x10052:'Insert',0x10047:'Home',0x1004f:'End',
+      0x10049:'Page Up',0x10051:'Page Down',
+      0x2a:japanese ? '左Shift' : 'Left Shift',0x36:japanese ? '右Shift' : 'Right Shift',
+      0x1d:japanese ? '左Ctrl' : 'Left Ctrl',0x1001d:japanese ? '右Ctrl' : 'Right Ctrl',
+      0x38:japanese ? '左Alt' : 'Left Alt',0x10038:japanese ? '右Alt' : 'Right Alt',
+      0x0c:'-',0x0d:'=',0x1a:'[',0x1b:']',0x27:';',0x28:"'",0x29:'`',
+      0x2b:'\\',0x33:',',0x34:'.',0x35:'/',0x56:'Intl Backslash',
+      0x53:japanese ? 'テンキー .' : 'Numpad .',
+      0x10035:japanese ? 'テンキー /' : 'Numpad /',
+      0x37:japanese ? 'テンキー *' : 'Numpad *',
+      0x4a:japanese ? 'テンキー -' : 'Numpad -',
+      0x4e:japanese ? 'テンキー +' : 'Numpad +'};
     if (names[code]) return names[code];
     const chars = {0x1e:'A',0x30:'B',0x2e:'C',0x20:'D',0x12:'E',0x21:'F',0x22:'G',0x23:'H',
       0x17:'I',0x24:'J',0x25:'K',0x26:'L',0x32:'M',0x31:'N',0x18:'O',0x19:'P',0x10:'Q',
       0x13:'R',0x1f:'S',0x14:'T',0x16:'U',0x2f:'V',0x11:'W',0x2d:'X',0x15:'Y',0x2c:'Z'};
     if (chars[code]) return chars[code];
     if (code >= 0x02 && code <= 0x0b) return String((code - 1) % 10);
+    const numpad = {0x52:0,0x4f:1,0x50:2,0x51:3,0x4b:4,
+      0x4c:5,0x4d:6,0x47:7,0x48:8,0x49:9};
+    if (Object.prototype.hasOwnProperty.call(numpad, code))
+      return (japanese ? 'テンキー ' : 'Numpad ') + numpad[code];
+    if (code >= 0x3b && code <= 0x44) return 'F' + (code - 0x3a);
+    if (code === 0x57 || code === 0x58) return 'F' + (code - 0x4c);
     return 'Scan ' + code.toString(16).toUpperCase();
   };
   const scan = event => {
@@ -630,6 +666,18 @@
   $('settings-open').onclick = () => { $('settings').hidden = false; $('language').focus(); };
   $('check-updates').onclick = checkUpdates;
   $('open-release').onclick = () => send('openReleases');
+  $('install-update').onclick = () => {
+    if (updateStatus !== 'available' && updateStatus !== 'installError') return;
+    $('update-confirm-text').textContent = tr('updateConfirmText').replace('{version}', latestVersion);
+    $('update-dialog').hidden = false;
+    $('update-cancel').focus();
+  };
+  $('update-confirm').onclick = () => {
+    if (!latestVersion) return;
+    close('update-dialog');
+    updateStatus = 'installing'; renderUpdateStatus();
+    send('installUpdate', latestVersion);
+  };
   $('move-create-new').onchange = event => { $('move-new-fields').hidden = !event.target.checked;
     $('move-folder').disabled = event.target.checked;
     if (event.target.checked) $('move-new-name').focus(); };
@@ -674,7 +722,7 @@
       return;
     }
     if (event.key === 'Escape') {
-      for (const id of ['already-running-dialog','delete-dialog','import-dialog','close-dialog','editor','name-dialog','move-dialog','pad-dialog','settings']) if (!$(id).hidden) {
+      for (const id of ['already-running-dialog','update-dialog','delete-dialog','import-dialog','close-dialog','editor','name-dialog','move-dialog','pad-dialog','settings']) if (!$(id).hidden) {
         close(id); event.preventDefault(); return;
       }
     }
@@ -710,6 +758,11 @@
     else if (message.type === 'closePrompt') { $('close-dialog').hidden = false; $('close-to-tray').focus(); }
     else if (message.type === 'alreadyRunning') { $('already-running-dialog').hidden = false; $('already-running-ok').focus(); }
     else if (message.type === 'updateOpenError') toast(tr('updateOpenError'));
+    else if (message.type === 'updateInstallError') {
+      updateFailure = message.code === 4 ? 'updateChecksumError' :
+        message.code === 2 ? 'updateReleaseError' : 'updateInstallError';
+      updateStatus = 'installError'; renderUpdateStatus();
+    }
     else if (message.type === 'targetIcon' && state) {
       requestedIcons.delete(message.path);
       const icon = typeof message.data === 'string' &&

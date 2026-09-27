@@ -34,6 +34,8 @@ You need Windows 10/11 and a 2026 Steam Controller / Puck. Install the [Microsof
 
 If the target app runs as administrator, run Remapcon as administrator too.
 
+To update, select **Check for updates** in Settings. If a newer release is available, choose **Update and restart**. Remapcon verifies the ZIP's SHA-256, exits, replaces its files, and restarts. Windows may request administrator permission if the app folder is not writable. Users of v1.1.1 or earlier need to extract the new ZIP manually once to get the updater.
+
 ## Build from source
 
 Install Visual Studio with Desktop development with C++, the Windows SDK, and CMake 3.20 or newer. CMake downloads the WebView2 SDK on first configure.

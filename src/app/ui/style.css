@@ -175,6 +175,7 @@ h3 { margin: 17px 0 8px; font-size: 14px; }
 .update-status[data-state="current"]::before { content: '✓'; display: inline-grid; flex: 0 0 18px; width: 18px; height: 18px; place-items: center; border: 1px solid #71bd8d; border-radius: 50%; background: #28503a; color: #d5ffe1; font-size: 12px; font-weight: 700; line-height: 1; }
 .update-status[data-state="available"] { color: #d7b5ff; }
 .update-status[data-state="error"] { color: #f0adb7; }
+.update-status[data-state="installError"] { color: #f0adb7; }
 .primary.danger-confirm { border-color: #a94a61; background: #a03c59; }
 .primary.danger-confirm:hover, .primary.danger-confirm:focus-visible { border-color: #e27791; background: #bc4566; }
 body:not(.ui-ready) #app { visibility: hidden; }
