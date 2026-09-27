@@ -201,8 +201,8 @@
     '入力確認中：ボタンを押してください':'Input test: press a controller button',
     '通信が切れました：再接続します':'Disconnected: reconnecting',
     '予期しないエラー：アプリを再起動してください':'Unexpected error: restart the app',
-    'ボタン入力を検出：設定キーをWindowsに送信しました':'Sent mapped key to Windows',
-    'キー送信に失敗：対象アプリの権限を確認してください':'Could not send key: check app permissions',
+    'ボタン入力を検出：設定した入力をWindowsに送信しました':'Sent mapped input to Windows',
+    '入力送信に失敗：対象アプリの権限を確認してください':'Could not send input: check app permissions',
   };
   const statusText = value => lang() === 'en' ? (englishStatus[value] || value) : value;
   const compactStatus = value => {
@@ -212,12 +212,12 @@
       '停止中':'Stopped','自動待機中':'Auto standby','コントローラー待機中':'Waiting',
       '取得できません':'Unavailable','自動有効':'Auto active','有効':'Active',
       '入力確認中':'Input test','通信が切れました':'Disconnected',
-      'キー送信に失敗':'Send failed','ボタン入力を検出':'Input sent'
+      '入力送信に失敗':'Send failed','ボタン入力を検出':'Input sent'
     } : {
       '停止中':'停止中','自動待機中':'自動待機中','コントローラー待機中':'接続待ち',
       '取得できません':'取得不可','自動有効':'自動有効','有効':'有効',
       '入力確認中':'入力確認中','通信が切れました':'切断',
-      'キー送信に失敗':'送信失敗','ボタン入力を検出':'入力送信済み'
+      '入力送信に失敗':'送信失敗','ボタン入力を検出':'入力送信済み'
     };
     return labels[prefix] || translated;
   };
@@ -604,7 +604,7 @@
     $('edit-role').querySelector('[value=inherit]').hidden = state.editedLayer === 0;
     $('edit-role').querySelector('[value=mouse]').hidden = index < 18 || index > 21;
     $('edit-role').value = trigger >= 0 ? 'layer' : sequence.enabled ? 'sequence' : value === 0 ? 'off' : value === 0xffffffff ? 'inherit' : value >= 0x20001 && value <= 0x20003 ? 'mouse' : 'key';
-    capturedKey = value === 0xffffffff ? 0 : value;
+    capturedKey = value === 0xffffffff || (value >= 0x20001 && value <= 0x20003) ? 0 : value;
     $('edit-mouse-button').value = String(value >= 0x20001 && value <= 0x20003 ? value : 0x20001);
     $('edit-key').value = displayKey(capturedKey);
     $('edit-turbo').checked = turbo.enabled;

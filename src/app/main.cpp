@@ -708,20 +708,21 @@ void ApplyMappings(const std::array<bool, ButtonCount>& physical, bool gameForeg
                 state.sent = true;
                 state.failureReported = false;
                 state.nextRepeat = now + repeatDelay;
-                SetStatus(L"ボタン入力を検出：設定キーをWindowsに送信しました");
+                SetStatus(L"ボタン入力を検出：設定した入力をWindowsに送信しました");
             } else if (!state.failureReported) {
                 state.failureReported = true;
-                SetStatus(L"キー送信に失敗：対象アプリの権限を確認してください");
+                SetStatus(L"入力送信に失敗：対象アプリの権限を確認してください");
             }
-        } else if (continuousRefs[it->first] && now >= state.nextRepeat) {
+        } else if (it->first < MOUSE_LEFT && continuousRefs[it->first] &&
+                   now >= state.nextRepeat) {
             if (SendKey(it->first, true)) {
                 if (state.failureReported) {
                     state.failureReported = false;
-                    SetStatus(L"ボタン入力を検出：設定キーをWindowsに送信しました");
+                    SetStatus(L"ボタン入力を検出：設定した入力をWindowsに送信しました");
                 }
             } else if (!state.failureReported) {
                 state.failureReported = true;
-                SetStatus(L"キー送信に失敗：対象アプリの権限を確認してください");
+                SetStatus(L"入力送信に失敗：対象アプリの権限を確認してください");
             }
             state.nextRepeat = now + repeatInterval;
         }
