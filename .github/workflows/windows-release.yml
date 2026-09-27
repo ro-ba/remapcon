@@ -25,10 +25,11 @@ jobs:
         run: |
           $archive = (Resolve-Path "Remapcon-Windows-x64.zip").Path
           $digest = (Get-FileHash $archive -Algorithm SHA256).Hash.ToLowerInvariant()
-          & "build/Release/RemapconUpdater.exe" --verify-archive $archive $digest
-          if ($LASTEXITCODE -ne 0) { throw "Updater rejected the release ZIP (exit $LASTEXITCODE)" }
-          & "build/Release/RemapconUpdater.exe" --verify-archive $archive ('0' * 64)
-          if ($LASTEXITCODE -eq 0) { throw "Updater accepted an incorrect SHA-256" }
+          $updater = (Resolve-Path "build/Release/RemapconUpdater.exe").Path
+          $valid = Start-Process -FilePath $updater -ArgumentList @('--verify-archive', ('"' + $archive + '"'), $digest) -Wait -PassThru
+          if ($valid.ExitCode -ne 0) { throw "Updater rejected the release ZIP (exit $($valid.ExitCode))" }
+          $invalid = Start-Process -FilePath $updater -ArgumentList @('--verify-archive', ('"' + $archive + '"'), ('0' * 64)) -Wait -PassThru
+          if ($invalid.ExitCode -eq 0) { throw "Updater accepted an incorrect SHA-256" }
       - name: Check ZIP contents
         shell: pwsh
         run: |
