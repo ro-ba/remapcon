@@ -58,6 +58,10 @@
       updateConfirmText: 'Remapcon {version} をダウンロードして検証します。準備ができたらアプリを終了し、更新後に再起動します。',
       updateInstalling: '更新ファイルをダウンロード・検証しています。完了後に再起動します…',
       updateInstallError: '更新に失敗しました。もう一度お試しいただくか、リリースページから手動で更新してください。',
+      updateNetworkError: 'GitHubへの接続に失敗しました。ネットワークを確認してください。（E1）',
+      updateDownloadError: '更新用ZIPをダウンロードできませんでした。（E3）',
+      updateExtractError: '更新用ZIPを展開できませんでした。（E5）',
+      updateStartError: '更新用プログラムを起動できませんでした。RemapconUpdater.exeがアプリと同じフォルダにあるか確認してください。（E6）',
       updateChecksumError: 'ダウンロードしたZIPのSHA-256が一致しません。更新は中止しました。',
       updateReleaseError: '最新版が変わりました。もう一度「更新を確認」を押してください。',
     },
@@ -111,6 +115,10 @@
       updateConfirmText: 'Download and verify Remapcon {version}. When ready, the app will close, update, and restart.',
       updateInstalling: 'Downloading and verifying the update. The app will restart when ready…',
       updateInstallError: 'Update failed. Try again or update manually from the release page.',
+      updateNetworkError: 'Could not connect to GitHub. Check your network connection. (E1)',
+      updateDownloadError: 'Could not download the update ZIP. (E3)',
+      updateExtractError: 'Could not extract the update ZIP. (E5)',
+      updateStartError: 'Could not start the updater. Check that RemapconUpdater.exe is in the app folder. (E6)',
       updateChecksumError: 'The ZIP SHA-256 did not match. The update was stopped.',
       updateReleaseError: 'The latest release changed. Check for updates again.',
     },
@@ -774,8 +782,8 @@
     else if (message.type === 'alreadyRunning') { $('already-running-dialog').hidden = false; $('already-running-ok').focus(); }
     else if (message.type === 'updateOpenError') toast(tr('updateOpenError'));
     else if (message.type === 'updateInstallError') {
-      updateFailure = message.code === 4 ? 'updateChecksumError' :
-        message.code === 2 ? 'updateReleaseError' : 'updateInstallError';
+      updateFailure = ({1:'updateNetworkError',2:'updateReleaseError',3:'updateDownloadError',
+        4:'updateChecksumError',5:'updateExtractError',6:'updateStartError'})[message.code] || 'updateInstallError';
       updateStatus = 'installError'; renderUpdateStatus();
     }
     else if (message.type === 'targetIcon' && state) {

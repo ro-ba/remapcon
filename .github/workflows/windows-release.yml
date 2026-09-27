@@ -20,6 +20,16 @@ jobs:
         run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64
       - name: Build
         run: cmake --build build --config Release --target Remapcon RemapconUpdater
+      - name: Check update tags
+        shell: pwsh
+        run: |
+          $updater = (Resolve-Path "build/Release/RemapconUpdater.exe").Path
+          foreach ($tag in @('v1.3.0', 'v1.3.10')) {
+            $result = Start-Process -FilePath $updater -ArgumentList @('--validate-tag', $tag) -Wait -PassThru
+            if ($result.ExitCode -ne 0) { throw "Updater rejected $tag" }
+          }
+          $invalid = Start-Process -FilePath $updater -ArgumentList @('--validate-tag', 'v1.3') -Wait -PassThru
+          if ($invalid.ExitCode -eq 0) { throw "Updater accepted an incomplete tag" }
       - name: Package
         run: cpack --config build/CPackConfig.cmake -C Release -G ZIP
       - name: Verify ZIP with updater

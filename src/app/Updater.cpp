@@ -72,20 +72,6 @@ bool Utf8ToWide(const std::vector<unsigned char>& bytes, std::wstring& output) {
         output.data(), count) == count;
 }
 
-bool ValidTag(const std::wstring& tag) {
-    if (tag.size() < 7 || tag.size() > 32 || tag[0] != L'v') return false;
-    int dots = 0;
-    bool digit = false;
-    for (size_t i = 1; i < tag.size(); ++i) {
-        if (tag[i] == L'.') {
-            if (!digit || ++dots > 2) return false;
-            digit = false;
-        } else if (tag[i] >= L'0' && tag[i] <= L'9') digit = true;
-        else return false;
-    }
-    return dots == 2 && digit;
-}
-
 bool ReleaseDigest(const std::vector<unsigned char>& bytes,
                    const std::wstring& expectedTag, std::string& digest) {
     std::wstring text;
@@ -247,6 +233,11 @@ int VerifyArchive(const fs::path& archive, const std::string& expected) {
 int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
     int count = 0;
     LPWSTR* arguments = CommandLineToArgvW(GetCommandLineW(), &count);
+    if (arguments && count == 3 && wcscmp(arguments[1], L"--validate-tag") == 0) {
+        const bool valid = ValidUpdateTag(arguments[2]);
+        LocalFree(arguments);
+        return valid ? 0 : 1;
+    }
     if (arguments && count == 4 && wcscmp(arguments[1], L"--verify-archive") == 0) {
         const fs::path archive(arguments[2]);
         std::string digest;
@@ -270,7 +261,7 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
     LocalFree(arguments);
     DWORD windowProcess = 0;
     GetWindowThreadProcessId(window, &windowProcess);
-    if (!ValidTag(tag) || !parentId || windowProcess != parentId) return 1;
+    if (!ValidUpdateTag(tag) || !parentId || windowProcess != parentId) return 1;
     HANDLE parent = OpenProcess(SYNCHRONIZE, FALSE, parentId);
     if (!parent) return 1;
 
