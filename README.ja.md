@@ -8,6 +8,14 @@ Remapconは、2026年版Steam Controllerの入力をキーボード・マウス�
 SteamおよびSteam ControllerはValve Corporationの商標です。アイコンは独自の
 簡略化した図案で、Valveの公式ロゴは使用していません。
 
+## 画面イメージ
+
+実際のUIを、架空のプリセットと対象アプリを使って表示したデモ画面です。
+個人の設定や実際のアプリ情報は含みません。
+[デモ画面の生成用データ](docs/demo/generate_preview.py)も公開しています。
+
+![架空データを使ったRemapconの画面例](docs/images/remapcon-demo.png)
+
 ## 主な機能
 
 - アプリごとのプリセットとフォルダ、JSON形式のインポート・エクスポート

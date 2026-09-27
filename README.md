@@ -10,6 +10,14 @@ The icon is original, stylized artwork; it does not contain a Valve logo.
 
 [日本語の説明](README.ja.md)
 
+## Screenshot
+
+The actual UI is shown with fictional presets and target applications.
+No personal settings or real application data are included.
+The [demo data generator](docs/demo/generate_preview.py) is included for reproducibility.
+
+![Remapcon with fictional demo data](docs/images/remapcon-demo.png)
+
 ## Features
 
 - Per-app presets and folders, with import and export as JSON.
