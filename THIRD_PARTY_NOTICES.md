@@ -2,6 +2,7 @@
 
 Remapcon is an independent application derived in part from
 [SteamlessController](https://github.com/ddeverill/SteamlessController) by Dylan Deverill.
+The reused source was based on commit `26c5b4ab6eee8aaf57eb9c99383eed3dfe475df2`.
 The reused HID and Steam Controller communication code is distributed under the
 MIT license in [LICENSE](LICENSE). This repository is not a GitHub fork of that project.
 

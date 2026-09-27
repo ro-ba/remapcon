@@ -1,77 +1,52 @@
 # Remapcon
 
-Remapcon is an unofficial Windows key and mouse mapper for the 2026 Steam Controller.
-It reads the controller in Steamless Mode and applies presets when a selected app
-is in the foreground. The interface uses WebView2; input handling is native C++.
-
-**This project is independent of Valve and is not endorsed by Valve.**
-Steam and Steam Controller are trademarks of Valve Corporation.
-The icon is original, stylized artwork; it does not contain a Valve logo.
+A Windows app for mapping the 2026 Steam Controller / Puck to keyboard and mouse input.
 
 [日本語の説明](README.ja.md)
+
+## Why I built it
+
+Steam Input is usually enough. In my setup, it could not reliably track an app launched through a separate launcher, and Desktop Layout or Lizard Mode input could overlap with the intended mapping. Remapcon reads the controller directly and maps its input for the app you choose.
+
+## Features
+
+- Per-app presets organized in folders
+- Button, right-stick direction, and independent touchpad mappings
+- Layers, turbo, and key sequences
+- Automatic activation while the target app is in the foreground
+- JSON import and export
 
 ## Screenshot
 
 The actual UI is shown with fictional presets and target applications.
-No personal settings or real application data are included.
-The [demo data generator](docs/demo/generate_preview.py) is included for reproducibility.
 
-![Remapcon with fictional demo data](docs/images/remapcon-demo.png)
+![Remapcon with fictional English demo data](docs/images/remapcon-demo-en.png)
 
-## Features
+## Getting started
 
-- Per-app presets and folders, with import and export as JSON.
-- Button and right-stick direction mappings, layers, turbo, and key sequences.
-- Independent mouse or scroll movement for each touchpad.
-- Releases all synthesized keys on stop, focus loss, and controller disconnect.
+**There is no downloadable ZIP in GitHub Releases yet.** Until the first release is published, use the build instructions below. Once available, download `Remapcon-Windows-x64.zip` from [Releases](https://github.com/ro-ba/remapcon/releases), extract it, and run `Remapcon.exe`. There is no installer.
 
-## Requirements
+You need Windows 10/11 and a 2026 Steam Controller / Puck. Install the [Microsoft Edge WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/) and [Visual C++ Redistributable (x64)](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist) if your PC does not already have them.
 
-- Windows 10 or 11 and a 2026 Steam Controller.
-- [Microsoft Edge WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/).
-- [Microsoft Visual C++ Redistributable (x64)](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist) for the prebuilt executable.
-- Administrator mode may be required for an elevated target app to receive input.
+1. Close Steam if it is using the controller.
+2. Create a preset and use **Choose app** to select the target executable.
+3. Double-click a mapping row to edit it. Turn on **Auto enable in target app** to activate the preset while that app is in the foreground.
 
-Close Steam before enabling Steamless Mode if it is using the controller.
-The app does not install a virtual gamepad driver.
+If the target app runs as administrator, run Remapcon as administrator too.
 
-## Build
+## Build from source
 
-Install Visual Studio with Desktop development with C++, CMake 3.20 or newer,
-and the Windows SDK. CMake downloads the pinned WebView2 SDK from NuGet on its
-first configure. For Visual Studio 2026:
+Install Visual Studio with Desktop development with C++, the Windows SDK, and CMake 3.20 or newer. CMake downloads the WebView2 SDK on first configure.
 
 ```bat
 cmake -S . -B build -G "Visual Studio 18 2026" -A x64
 cmake --build build --config Release --target Remapcon
 ```
 
-For Visual Studio 2022, use `Visual Studio 17 2022` as the generator. The
-executable is `build\Release\Remapcon.exe`.
-After building, create a portable ZIP containing the executable and required
-license files with:
+The executable is `build\Release\Remapcon.exe`. To package it with license files, run `cpack --config build\CPackConfig.cmake -C Release -G ZIP`.
 
-```bat
-cpack --config build\CPackConfig.cmake -C Release -G ZIP
-```
+## License
 
-Extract `Remapcon-Windows-x64.zip` and run `Remapcon.exe`. The ZIP does not
-bundle Microsoft runtime installers; install missing prerequisites using the
-links above.
+Remapcon uses HID and controller communication code from [SteamlessController](https://github.com/ddeverill/SteamlessController). The original code and Remapcon are MIT-licensed; see [LICENSE](LICENSE) and [third-party notices](THIRD_PARTY_NOTICES.md).
 
-Settings are stored in `%LOCALAPPDATA%\Remapcon\ControllerSettings.json`.
-On first launch, the app copies existing settings from
-`%LOCALAPPDATA%\SteamlessController` if present, leaving the originals intact.
-
-## Origin and licenses
-
-Remapcon reuses and adapts the HID and Steam Controller communication code from
-[SteamlessController](https://github.com/ddeverill/SteamlessController)
-(commit `26c5b4ab6eee8aaf57eb9c99383eed3dfe475df2`) by Dylan Deverill.
-The original code is MIT-licensed. Remapcon's additions are also MIT-licensed;
-see [LICENSE](LICENSE). See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
-for WebView2 notices and release packaging requirements.
-
-A source or binary release should include the license and notice files.
-The original SteamlessController installer, SignPath signing workflow,
-ViGEmClient, and ViGEmBus installer are not part of this repository.
+Remapcon is an unofficial app independent of Valve Corporation. Steam and Steam Controller are trademarks of Valve Corporation.

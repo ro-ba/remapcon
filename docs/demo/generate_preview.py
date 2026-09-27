@@ -1,9 +1,13 @@
-from pathlib import Path
-import sys
 import base64
 import json
 import struct
+import sys
 import zlib
+from pathlib import Path
+
+if len(sys.argv) != 3 or sys.argv[1] not in ('ja', 'en'):
+    raise SystemExit('Usage: python docs/demo/generate_preview.py ja|en OUTPUT.html')
+language, output_path = sys.argv[1:]
 
 # The preview uses fictional data and never reads the user's settings.
 root = Path(__file__).resolve().parents[2]
@@ -58,6 +62,16 @@ state = dict(type='state',
     buttons=buttons,
     categories=['基本ボタン', '十字キー', '背面ボタン', 'トラックパッド', 'メニュー・ビュー', 'スティック'],
 )
+if language == 'en':
+    state['language'] = 'en'
+    state['folders'] = ['Projects', 'Projects/Art', 'Projects/Video', 'Meetings']
+    for item, name, folder in zip(state['presets'],
+                                  ['Illustration', 'Photo library', 'Video editing', 'Presentation'],
+                                  ['Projects/Art', 'Projects/Art', 'Projects/Video', 'Meetings']):
+        item['name'] = name
+        item['folder'] = folder
+    state['presets'][0]['layers'][0]['name'] = 'Brush'
+    state['presets'][0]['layers'][1]['name'] = 'Tools'
 
 # A tiny original placeholder icon for the fictitious demo executable.
 size = 32
@@ -94,7 +108,5 @@ window.chrome.webview = {
 };
 </script>'''.replace('DATA', json.dumps(state,ensure_ascii=False)).replace('ICON',json.dumps(icon_data))
 html = html.replace('<!-- SCRIPT -->',bridge+'<script>'+(root/'src/app/ui/app.js').read_text()+'</script>')
-if len(sys.argv) != 2:
-    raise SystemExit('Usage: python docs/demo/generate_preview.py OUTPUT.html')
-Path(sys.argv[1]).write_text(html, encoding='utf-8')
-print(f'Wrote {sys.argv[1]}')
+Path(output_path).write_text(html, encoding='utf-8')
+print(f'Wrote {output_path}')

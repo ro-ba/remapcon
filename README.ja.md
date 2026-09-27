@@ -1,64 +1,50 @@
 # Remapcon
 
-Remapconは、2026年版Steam Controllerの入力をキーボード・マウス操作へ割り当てる
-非公式のWindowsアプリです。対象アプリごとのプリセットを作り、対象アプリが前面に
-あるときに自動で有効化できます。画面はWebView2、入力処理はC++で動作します。
+2026年版 Steam Controller / Puck のボタンやトラックパッドを、Windowsのキー・マウス操作に割り当てるアプリです。
 
-**Valve Corporationによる公式アプリではなく、Valveとの提携・承認関係はありません。**
-SteamおよびSteam ControllerはValve Corporationの商標です。アイコンは独自の
-簡略化した図案で、Valveの公式ロゴは使用していません。
+## 作った理由
+
+通常はSteam Inputのコントローラー設定で十分です。ただ、別のランチャーから起動するアプリをSteam Inputがうまく追跡できず、Desktop LayoutやLizard Modeの入力が設定と重なることがありました。Remapconはコントローラーの入力を直接読み取り、指定したアプリに合わせてキーやマウス操作へ変換します。
+
+## できること
+
+- 対象アプリごとにプリセットを作り、フォルダで整理する
+- ボタン、右スティックの方向、左右トラックパッドを割り当てる
+- レイヤー切替、連打、キーシーケンスを設定する
+- 対象アプリが前面にあるとき自動で有効にする
+- プリセットをJSON形式でインポート・エクスポートする
 
 ## 画面イメージ
 
-実際のUIを、架空のプリセットと対象アプリを使って表示したデモ画面です。
-個人の設定や実際のアプリ情報は含みません。
-[デモ画面の生成用データ](docs/demo/generate_preview.py)も公開しています。
+実際のUIに架空のプリセットと対象アプリを表示したデモ画面です。
 
 ![架空データを使ったRemapconの画面例](docs/images/remapcon-demo.png)
 
-## 主な機能
+## 使い始める
 
-- アプリごとのプリセットとフォルダ、JSON形式のインポート・エクスポート
-- ボタン・右スティックの方向、レイヤー、連打、キーシーケンスの割り当て
-- 左右トラックパッドそれぞれのマウス移動またはスクロール
-- 停止、フォーカス移動、切断時の送信キー解除
+**現在、GitHub Releasesには配布用ZIPを公開していません。** 公開までは下の「ソースからビルド」を参照してください。配布版が公開されたら、[Releases](https://github.com/ro-ba/remapcon/releases)から`Remapcon-Windows-x64.zip`をダウンロードし、展開したフォルダの`Remapcon.exe`を起動できます。インストーラーはありません。
 
-## 動作・ビルド
+Windows 10/11と2026年版 Steam Controller / Puck が必要です。PCにない場合は、[Microsoft Edge WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/)と[Visual C++ 再頒布可能パッケージ（x64）](https://learn.microsoft.com/ja-jp/cpp/windows/latest-supported-vc-redist)をインストールしてください。
 
-Windows 10/11、2026年版Steam Controller、[Microsoft Edge WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/)が必要です。
-配布版のEXEには[Microsoft Visual C++ 再頒布可能パッケージ（x64）](https://learn.microsoft.com/ja-jp/cpp/windows/latest-supported-vc-redist)も必要です。
-対象アプリが管理者権限の場合はRemapconも管理者として実行する必要があります。
-Steamがコントローラーを使用中なら、Steamを終了してからSteamless Modeを有効にしてください。
-仮想ゲームパッドドライバーは使用しません。
+1. Steamがコントローラーを使用中なら、Steamを終了します。
+2. Remapconでプリセットを作成し、「アプリを変更」から対象アプリを指定します。
+3. 割り当てを変えたい行をダブルクリックして設定します。「前面で自動有効」をオンにすると、対象アプリが前面にある間だけ有効になります。
 
-ビルドにはVisual Studioの「C++によるデスクトップ開発」、Windows SDK、CMake 3.20以上が必要です。
-初回のCMake設定時にWebView2 SDKをNuGetから取得します。Visual Studio 2026の場合:
+対象アプリを管理者として実行している場合は、Remapconも管理者として実行してください。
+
+## ソースからビルド
+
+Visual Studioの「C++によるデスクトップ開発」、Windows SDK、CMake 3.20以上が必要です。初回の設定時にWebView2 SDKを取得します。
 
 ```bat
 cmake -S . -B build -G "Visual Studio 18 2026" -A x64
 cmake --build build --config Release --target Remapcon
 ```
 
-Visual Studio 2022ではジェネレーターを`Visual Studio 17 2022`に変更します。
-実行ファイルは`build\Release\Remapcon.exe`です。
-ライセンス表示を含む配布用ZIPは、ビルド後に次のコマンドで作れます。
+生成物は`build\Release\Remapcon.exe`です。ライセンス表示を含む配布用ZIPは`cpack --config build\CPackConfig.cmake -C Release -G ZIP`で作成できます。
 
-```bat
-cpack --config build\CPackConfig.cmake -C Release -G ZIP
-```
+## ライセンス
 
-生成された`Remapcon-Windows-x64.zip`を展開して`Remapcon.exe`を起動します。
-ZIPにはMicrosoftのランタイムインストーラーを同梱していません。必要な場合は
-上記のリンクから入手してください。
-設定は`%LOCALAPPDATA%\Remapcon\ControllerSettings.json`に保存します。
-以前の`%LOCALAPPDATA%\SteamlessController`に設定がある場合は初回起動時に
-読み取り、元のファイルは残します。
+[SteamlessController](https://github.com/ddeverill/SteamlessController)のHID通信・コントローラー制御コードを利用しています。元コードとRemapconはMITライセンスです。詳しくは[LICENSE](LICENSE)と[第三者の権利表示](THIRD_PARTY_NOTICES.md)を参照してください。
 
-## 出典・ライセンス
-
-HID通信とSteam Controller制御には、Dylan Deverill氏の
-[SteamlessController](https://github.com/ddeverill/SteamlessController)
-（基点コミット`26c5b4ab6eee8aaf57eb9c99383eed3dfe475df2`）のコードを利用しています。
-元コードとRemapconの追加コードはMITライセンスで公開します。全文は[LICENSE](LICENSE)、
-WebView2などの権利表示は[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)を参照してください。
-ソースやEXEを配布するときはライセンス・権利表示ファイルも同梱してください。
+RemapconはValve Corporationとは無関係の非公式アプリです。SteamとSteam ControllerはValve Corporationの商標です。
