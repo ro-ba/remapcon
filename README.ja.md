@@ -30,7 +30,7 @@ Remapconはコントローラーを直接読み取り、ボタン、スティッ
 
 Windows 10/11と2026年版Steam Controllerが必要です。[Microsoft Edge WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/)や[Visual C++ 再頒布可能パッケージ（x64）](https://learn.microsoft.com/ja-jp/cpp/windows/latest-supported-vc-redist)が入っていない場合は、別途インストールしてください。
 
-1. Steamがコントローラーを使用している場合は、Steamを終了します。
+1. 通常はSteamを終了します。Steamを起動したまま使う試験的な手順は[こちら](docs/steam-coexistence-test.ja.md)を参照してください。
 2. Remapconでプリセットを作成し、「アプリを変更」から対象アプリを指定します。
 3. 割り当てを変更したい行をダブルクリックします。「前面で自動有効」をオンにすると、対象アプリを操作している間だけプリセットが有効になります。
 

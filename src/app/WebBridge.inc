@@ -90,6 +90,8 @@ void SendUiState() {
     json += L"],\"selectedPreset\":" + std::to_wstring(selectedPreset) +
         L",\"editedLayer\":" + std::to_wstring(editedLayer) +
         L",\"autoMode\":" + JsonBool(autoMode.load()) +
+        L",\"steamSharedMode\":" + JsonBool(steamSharedMode.load()) +
+        L",\"controllerShared\":" + JsonBool(controllerShared.load()) +
         L",\"requested\":" + JsonBool(requested.load()) +
         L",\"preview\":" + JsonBool(previewMode.load()) +
         L",\"elevated\":" + JsonBool(processElevated) +
@@ -253,6 +255,11 @@ void OnWebMessage(const std::wstring& raw) {
         okay = SavePresets();
         if (!okay) autoMode = old;
         if (okay && autoMode) requested = false;
+    } else if (command == L"setSteamSharedMode") {
+        const bool old = steamSharedMode.load();
+        steamSharedMode = arg(1) == L"1";
+        okay = SavePresets();
+        if (!okay) steamSharedMode = old;
     } else if (command == L"setPreview") {
         previewMode = arg(1) == L"1";
         okay = true;

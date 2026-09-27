@@ -31,7 +31,7 @@ Download `Remapcon-Windows-x64.zip` from [Releases](https://github.com/ro-ba/rem
 
 You need Windows 10/11 and a 2026 Steam Controller / Puck. Install the [Microsoft Edge WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/) and [Visual C++ Redistributable (x64)](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist) if your PC does not already have them.
 
-1. Close Steam if it is using the controller.
+1. Normally, close Steam. For the experimental coexistence mode, see the [test procedure](docs/steam-coexistence-test.md).
 2. Create a preset and use **Choose app** to select the target executable.
 3. Double-click a mapping row to edit it. Turn on **Auto enable in target app** to activate the preset while that app is in the foreground.
 
