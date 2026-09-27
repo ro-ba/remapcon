@@ -24,7 +24,7 @@ The actual UI is shown with fictional presets and target applications.
 
 ## Getting started
 
-**There is no downloadable ZIP in GitHub Releases yet.** Until the first release is published, use the build instructions below. Once available, download `Remapcon-Windows-x64.zip` from [Releases](https://github.com/ro-ba/remapcon/releases), extract it, and run `Remapcon.exe`. There is no installer.
+Download `Remapcon-Windows-x64.zip` from [Releases](https://github.com/ro-ba/remapcon/releases), extract it, and run `Remapcon.exe` from the extracted folder. There is no installer.
 
 You need Windows 10/11 and a 2026 Steam Controller / Puck. Install the [Microsoft Edge WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/) and [Visual C++ Redistributable (x64)](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist) if your PC does not already have them.
 

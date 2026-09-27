@@ -22,7 +22,7 @@
 
 ## 使い始める
 
-**現在、GitHub Releasesには配布用ZIPを公開していません。** 公開までは下の「ソースからビルド」を参照してください。配布版が公開されたら、[Releases](https://github.com/ro-ba/remapcon/releases)から`Remapcon-Windows-x64.zip`をダウンロードし、展開したフォルダの`Remapcon.exe`を起動できます。インストーラーはありません。
+[Releases](https://github.com/ro-ba/remapcon/releases)から`Remapcon-Windows-x64.zip`をダウンロードして展開し、フォルダ内の`Remapcon.exe`を起動します。インストーラーはありません。
 
 Windows 10/11と2026年版 Steam Controller / Puck が必要です。PCにない場合は、[Microsoft Edge WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/)と[Visual C++ 再頒布可能パッケージ（x64）](https://learn.microsoft.com/ja-jp/cpp/windows/latest-supported-vc-redist)をインストールしてください。
 
