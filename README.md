@@ -19,6 +19,7 @@ It is also useful for apps you want to control with keyboard and mouse bindings 
 - Adjustable deadzones and diagonal overlap for each stick, with a live response preview
 - Layers, turbo, and key sequences
 - Automatic activation while the target app is in the foreground
+- Optional exclusive handoff while Steam is running: Remapcon takes the controller for the target app and returns it to Steam when you leave (requires administrator privileges)
 - JSON import and export
 
 ## Screenshot
@@ -31,11 +32,17 @@ Download `Remapcon-Windows-x64.zip` from [Releases](https://github.com/ro-ba/rem
 
 You need Windows 10/11 and a 2026 Steam Controller / Puck. Install the [Microsoft Edge WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/) and [Visual C++ Redistributable (x64)](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist) if your PC does not already have them.
 
-1. Close Steam if it is using the controller.
+1. If Steam is using the controller, close Steam or configure **Use alongside Steam** below.
 2. Create a preset and use **Choose app** to select the target executable.
 3. Double-click a mapping row to edit it. Turn on **Auto enable in target app** to activate the preset while that app is in the foreground.
 
 If the target app runs as administrator, run Remapcon as administrator too.
+
+### Use alongside Steam
+
+Run Remapcon as administrator and turn on **Auto enable in target app**. In Settings, enable **Take exclusive control while the target app is in front**. Remapcon then uses your bindings while the target app is in front and returns the controller to Steam when you leave. **Find button** also takes temporary control while it is active. Windows reconnects the controller during each switch. You do not need to change Steam's Desktop Layout.
+
+This is an experimental feature for the 2026 Steam Controller. Switching to a target app and back to Steam's Desktop Layout has been confirmed on a physical controller. Returning to Steam games and every connection type have not been verified. See the [handoff investigation](docs/steam-coexistence-investigation.ja.md) for details.
 
 ## Build from source
 
