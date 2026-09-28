@@ -386,6 +386,12 @@ bool ShouldHoldController() {
         (previewMode.load() && GetForegroundWindow() == mainWindow);
 }
 
+bool ShouldTakeControllerFromSteam() {
+    return steamTakeover.load() && processElevated &&
+        ((autoMode.load() && IsTargetForeground()) ||
+         (previewMode.load() && GetForegroundWindow() == mainWindow));
+}
+
 struct DeviceCycleProcess {
     HANDLE process = nullptr;
     HANDLE downEvent = nullptr;
@@ -467,7 +473,7 @@ bool TakeControllerFromSteam(SteamController& controller, const std::wstring& pa
     }
     const auto deadline = Clock::now() + std::chrono::seconds(8);
     bool claimed = false;
-    while (running && ShouldHoldController() && steamTakeover.load() &&
+    while (running && ShouldHoldController() && ShouldTakeControllerFromSteam() &&
            Clock::now() < deadline) {
         if (controller.OpenExclusive(path)) {
             if (controller.WaitForStateReport(350)) { claimed = true; break; }
@@ -476,8 +482,7 @@ bool TakeControllerFromSteam(SteamController& controller, const std::wstring& pa
         std::this_thread::sleep_for(std::chrono::milliseconds(2));
     }
     const bool cycled = FinishDeviceCycle(cycle, 6000);
-    if (!claimed || !cycled || !running || !steamTakeover.load() ||
-        !autoMode.load() || !IsTargetForeground()) {
+    if (!claimed || !cycled || !running || !ShouldTakeControllerFromSteam()) {
         controller.Close();
         return false;
     }
@@ -992,8 +997,7 @@ void ControllerLoop() {
             const auto claim = controller.ClaimGameModeAccess();
             bool attemptedTakeover = false;
             if (claim != SteamController::AccessClaim::Exclusive &&
-                steamTakeover.load() && autoMode.load() && processElevated &&
-                IsTargetForeground() && Clock::now() >= retryTakeoverAfter) {
+                ShouldTakeControllerFromSteam() && Clock::now() >= retryTakeoverAfter) {
                 attemptedTakeover = true;
                 controller.Close();
                 SetStatus(L"Steamからコントローラーを切り替え中です");
@@ -1005,7 +1009,10 @@ void ControllerLoop() {
             if (claim != SteamController::AccessClaim::Exclusive && !tookFromSteam) {
                 SetStatus(attemptedTakeover ?
                     L"排他取得に失敗しました：20秒後に再試行します" :
-                    L"取得できません：Steamなどが使用中です");
+                    (previewMode.load() && GetForegroundWindow() == mainWindow &&
+                     !steamTakeover.load() ?
+                     L"ボタンを探すには、Steam起動中の排他取得をオンにしてください" :
+                     L"取得できません：Steamなどが使用中です"));
                 controller.Close();
                 std::this_thread::sleep_for(std::chrono::seconds(1));
                 continue;
