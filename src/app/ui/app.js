@@ -14,7 +14,9 @@
       foldersPresets: 'フォルダとプリセット', newFolder: '＋ フォルダ', newPreset: '＋ プリセット',
       copy: '複製', rename: '名前変更', delete: '削除', targetApp: 'このプリセットの対象アプリ',
       changeApp: 'アプリを変更', clear: '解除', autoMode: '前面で自動有効', editLayer: '編集するレイヤー',
-      inputGroup: '入力の種類', doubleClickHint: '行をダブルクリックして編集', controller: 'コントローラー',
+      inputGroup: '入力の種類', doubleClickHint: '行を選択して Ctrl+C / Ctrl+V・ダブルクリックで編集', controller: 'コントローラー',
+      copyRow: '行をコピー', pasteRow: '行に貼り付け', rowCopied: 'コピーしました', rowPasted: 'ペーストしました',
+      rowEmpty: '先に行をコピーしてください', rowIncompatible: 'この行には貼り付けできません', rowSaveFailed: '貼り付けを保存できませんでした',
       assignedTo: '割り当て先', type: '設定種別', action: '動作', keyInput: 'キー入力',
       sequence: 'シーケンス', layerSwitch: 'レイヤー切替', disabled: '無効', inherit: '引き継ぐ',
       sentKey: '送信するキー', mouseButton: 'マウスボタン', mouseLeft: '左クリック', mouseRight: '右クリック', mouseMiddle: '中クリック', capture: 'キーを押す', turbo: '連打する', interval: '間隔（ms）',
@@ -78,7 +80,9 @@
       foldersPresets: 'Folders and presets', newFolder: '+ Folder', newPreset: '+ Preset',
       copy: 'Duplicate', rename: 'Rename', delete: 'Delete', targetApp: 'Target app for this preset',
       changeApp: 'Choose app', clear: 'Clear', autoMode: 'Auto enable in target app', editLayer: 'Layer to edit',
-      inputGroup: 'Input group', doubleClickHint: 'Double-click a row to edit', controller: 'Controller',
+      inputGroup: 'Input group', doubleClickHint: 'Select a row, then Ctrl+C / Ctrl+V; double-click to edit', controller: 'Controller',
+      copyRow: 'Copy row', pasteRow: 'Paste into row', rowCopied: 'Copied', rowPasted: 'Pasted',
+      rowEmpty: 'Copy a row first', rowIncompatible: 'Cannot paste into this row', rowSaveFailed: 'Could not save the pasted row',
       assignedTo: 'Assignment', type: 'Type', action: 'Action', keyInput: 'Key input',
       sequence: 'Sequence', layerSwitch: 'Layer switch', disabled: 'Disabled', inherit: 'Inherit',
       sentKey: 'Key to send', mouseButton: 'Mouse button', mouseLeft: 'Left click', mouseRight: 'Right click', mouseMiddle: 'Middle click', capture: 'Press a key', turbo: 'Turbo', interval: 'Interval (ms)',
@@ -140,6 +144,7 @@
   let state = null;
   let category = 0;
   let editingButton = -1;
+  let selectedRow = null;
   let naming = null;
   let captureTarget = '';
   let capturedKey = 0;
@@ -320,8 +325,8 @@
       F7:0x41,F8:0x42,F9:0x43,F10:0x44,F11:0x57,F12:0x58};
     return letters[event.code] || other[event.code] || 0;
   };
-  function toast(message) { const node = $('alert'); node.textContent = message; node.hidden = false;
-    clearTimeout(toastTimer); toastTimer = setTimeout(() => { node.hidden = true; }, 3500); }
+  function toast(message, duration = 3500) { const node = $('alert'); node.textContent = message; node.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => { node.hidden = true; }, duration); }
   function translate() {
     document.documentElement.lang = lang();
     document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = tr(el.dataset.i18n); });
@@ -518,6 +523,43 @@
   function paintSensitivityRange(range) {
     range.style.setProperty('--range-progress', ((Number(range.value) - 25) / 375 * 100) + '%');
   }
+  function selectRow(row, kind, index) {
+    selectedRow = {kind, index, preset:state.selectedPreset, layer:state.editedLayer};
+    document.querySelectorAll('.input-row.selected').forEach(item => item.classList.remove('selected'));
+    row.classList.add('selected');
+  }
+  function rowCommand(command, kind, index) {
+    send(command, kind, index, state.editedLayer, state.selectedPreset);
+  }
+  function wireRow(row, kind, index, edit, extraContext = []) {
+    row.dataset.rowKind = kind;
+    row.dataset.rowIndex = String(index);
+    if (selectedRow && selectedRow.kind === kind && selectedRow.index === index &&
+        selectedRow.preset === state.selectedPreset && selectedRow.layer === state.editedLayer)
+      row.classList.add('selected');
+    row.onclick = () => selectRow(row, kind, index);
+    row.onfocus = () => selectRow(row, kind, index);
+    row.ondblclick = edit;
+    row.oncontextmenu = event => {
+      selectRow(row, kind, index);
+      showContext(event, [
+        {label:tr('copyRow') + '  Ctrl+C', action:()=>rowCommand('copyRow', kind, index)},
+        {label:tr('pasteRow') + '  Ctrl+V', action:()=>rowCommand('pasteRow', kind, index)},
+        ...extraContext,
+      ]);
+    };
+    row.onkeydown = event => {
+      if (event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey) {
+        const key = event.key.toLowerCase();
+        if (key === 'c' || key === 'v') {
+          event.preventDefault(); event.stopPropagation();
+          rowCommand(key === 'c' ? 'copyRow' : 'pasteRow', kind, index);
+          return;
+        }
+      }
+      if (event.key === 'Enter') { event.preventDefault(); edit(); }
+    };
+  }
   function openPadDialog() {
     $('left-pad-mode').value = String(current().leftPadMode);
     $('right-pad-mode').value = String(current().rightPadMode);
@@ -574,12 +616,11 @@
       const row = document.createElement('button'); row.type = 'button'; row.className = 'input-row pad-mode-row';
       row.innerHTML = '<strong>' + esc(tr('stickSettings')) + '</strong><span class="subtle">' +
         esc(tr('deadzone')) + ' · ' + esc(tr('overlap')) + '</span><span class="kind">' + esc(tr('stickSettingType')) + '</span>';
-      row.ondblclick = openStickDialog;
-      row.onkeydown = event => { if (event.key === 'Enter') { event.preventDefault(); openStickDialog(); } };
+      wireRow(row, 'stick', 0, openStickDialog);
       host.append(row);
     }
     if (category === -1 || category === 3) {
-      for (const side of ['left','right']) {
+      for (const [index, side] of ['left','right'].entries()) {
         const row = document.createElement('button'); row.type = 'button'; row.className = 'input-row pad-mode-row';
         const mode = side === 'left' ? current().leftPadMode : current().rightPadMode;
         const sensitivity = side === 'left' ? current().leftPadSensitivity : current().rightPadSensitivity;
@@ -587,8 +628,7 @@
         row.innerHTML = '<strong>' + esc(tr(side === 'left' ? 'leftPadMove' : 'rightPadMove')) +
           '</strong><span><span class="keycap">' + esc(description) +
           '</span></span><span class="kind">' + esc(tr('padMotionType')) + '</span>';
-        row.ondblclick = openPadDialog;
-        row.onkeydown = event => { if (event.key === 'Enter') { event.preventDefault(); openPadDialog(); } };
+        wireRow(row, 'pad', index, openPadDialog);
         host.append(row);
       }
     }
@@ -610,11 +650,9 @@
       else if (turbo.enabled) kind = tr('turboLabel');
       const row = document.createElement('button'); row.type = 'button'; row.className = 'input-row'; row.dataset.button = String(index);
       row.innerHTML = '<strong>' + esc(buttonName(index)) + '</strong><span><span class="keycap">' + esc(assignment) + '</span></span><span class="kind">' + esc(kind) + '</span>';
-      row.ondblclick = () => openEditor(index);
-      row.oncontextmenu = event => showContext(event, [
+      wireRow(row, 'binding', index, () => openEditor(index), [
         {label:tr('resetBinding'), danger:true, action:()=>requestBindingReset(index)},
       ]);
-      row.onkeydown = event => { if (event.key === 'Enter') { event.preventDefault(); openEditor(index); } };
       host.append(row);
     });
   }
@@ -896,6 +934,17 @@
     else if (message.type === 'closePrompt') { $('close-dialog').hidden = false; $('close-to-tray').focus(); }
     else if (message.type === 'alreadyRunning') { $('already-running-dialog').hidden = false; $('already-running-ok').focus(); }
     else if (message.type === 'updateOpenError') toast(tr('updateOpenError'));
+    else if (message.type === 'rowClipboard') {
+      const keys = {copied:'rowCopied',pasted:'rowPasted',empty:'rowEmpty',
+        incompatible:'rowIncompatible',saveFailed:'rowSaveFailed'};
+      toast(tr(keys[message.result] || 'rowSaveFailed'),
+        message.result === 'copied' || message.result === 'pasted' ? 1600 : 3000);
+      if (message.result === 'pasted' && selectedRow) {
+        const row = document.querySelector('.input-row[data-row-kind="' + selectedRow.kind +
+          '"][data-row-index="' + selectedRow.index + '"]');
+        if (row) row.focus();
+      }
+    }
     else if (message.type === 'updateInstallError') {
       updateFailure = ({1:'updateNetworkError',2:'updateReleaseError',3:'updateDownloadError',
         4:'updateChecksumError',5:'updateExtractError',6:'updateStartError'})[message.code] || 'updateInstallError';

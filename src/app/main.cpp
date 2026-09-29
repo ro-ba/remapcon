@@ -220,6 +220,19 @@ struct Preset {
     std::array<SequenceSettings, ButtonCount> sequence{};
     std::vector<Layer> layers;
 };
+enum class RowClipboardKind { None, Binding, Pad, Stick };
+struct RowClipboard {
+    RowClipboardKind kind = RowClipboardKind::None;
+    bool layerSwitch = false;
+    uint32_t mapping = 0;
+    TurboSettings turbo;
+    SequenceSettings sequence;
+    Layer layer;
+    uint32_t padMode = 0, padSensitivity = 100;
+    uint32_t leftDeadzone = 0, rightDeadzone = 0;
+    uint32_t leftOverlap = 0, rightOverlap = 0;
+};
+RowClipboard rowClipboard;
 std::vector<Preset> presets;
 std::vector<std::wstring> folders;
 std::wstring language = L"ja";
@@ -1548,6 +1561,148 @@ bool SetButtonRole(size_t button, bool asLayer, size_t targetLayer, uint32_t key
     PublishSelectedPreset();
     UpdateLayerControls();
     return true;
+}
+
+bool CopyBindingRow(size_t button) {
+    if (button >= ButtonCount || selectedPreset >= presets.size() || editedLayer < 0 ||
+        static_cast<size_t>(editedLayer) > presets[selectedPreset].layers.size()) return false;
+    const auto& preset = presets[selectedPreset];
+    RowClipboard copy;
+    if (editedLayer == 0) {
+        for (const auto& layer : preset.layers) {
+            if (layer.trigger == button) {
+                copy.layerSwitch = true;
+                copy.layer = layer;
+                break;
+            }
+        }
+    }
+    if (!copy.layerSwitch) {
+        const auto& mapping = editedLayer == 0 ? preset.mapping :
+            preset.layers[editedLayer - 1].mapping;
+        const auto& turbo = editedLayer == 0 ? preset.turbo :
+            preset.layers[editedLayer - 1].turbo;
+        const auto& sequence = editedLayer == 0 ? preset.sequence :
+            preset.layers[editedLayer - 1].sequence;
+        copy.mapping = mapping[button];
+        copy.turbo = turbo[button];
+        copy.sequence = sequence[button];
+    }
+    copy.kind = RowClipboardKind::Binding;
+    rowClipboard = std::move(copy);
+    return true;
+}
+
+enum class PasteBindingResult { Pasted, Empty, Incompatible, SaveFailed };
+
+PasteBindingResult PasteBindingRow(size_t button) {
+    if (rowClipboard.kind == RowClipboardKind::None) return PasteBindingResult::Empty;
+    if (rowClipboard.kind != RowClipboardKind::Binding) return PasteBindingResult::Incompatible;
+    if (button >= ButtonCount || selectedPreset >= presets.size() || editedLayer < 0 ||
+        static_cast<size_t>(editedLayer) > presets[selectedPreset].layers.size())
+        return PasteBindingResult::Incompatible;
+    if ((rowClipboard.layerSwitch && editedLayer != 0) ||
+        (!rowClipboard.layerSwitch &&
+         ((rowClipboard.mapping == INHERIT && editedLayer == 0) ||
+          (rowClipboard.mapping >= MOUSE_LEFT && rowClipboard.mapping <= MOUSE_MIDDLE &&
+           (button < LeftPadClick || button > RightPadTap)))))
+        return PasteBindingResult::Incompatible;
+
+    Preset previous = presets[selectedPreset];
+    auto& preset = presets[selectedPreset];
+    if (editedLayer == 0) {
+        auto destination = std::find_if(preset.layers.begin(), preset.layers.end(),
+            [button](const Layer& layer) { return layer.trigger == button; });
+        if (rowClipboard.layerSwitch) {
+            Layer copy = rowClipboard.layer;
+            copy.trigger = button;
+            if (destination != preset.layers.end()) *destination = std::move(copy);
+            else {
+                if (preset.layers.size() >= ButtonCount) return PasteBindingResult::Incompatible;
+                preset.layers.push_back(std::move(copy));
+            }
+        } else {
+            if (destination != preset.layers.end()) preset.layers.erase(destination);
+            preset.mapping[button] = rowClipboard.mapping;
+            preset.turbo[button] = rowClipboard.turbo;
+            preset.sequence[button] = rowClipboard.sequence;
+        }
+    } else {
+        auto& layer = preset.layers[editedLayer - 1];
+        layer.mapping[button] = rowClipboard.mapping;
+        layer.turbo[button] = rowClipboard.turbo;
+        layer.sequence[button] = rowClipboard.sequence;
+    }
+    if (!SavePresets()) {
+        preset = std::move(previous);
+        return PasteBindingResult::SaveFailed;
+    }
+    PublishSelectedPreset();
+    UpdateLayerControls();
+    return PasteBindingResult::Pasted;
+}
+
+bool CopyPadRow(size_t side) {
+    if (side > 1 || selectedPreset >= presets.size()) return false;
+    const auto& preset = presets[selectedPreset];
+    RowClipboard copy;
+    copy.kind = RowClipboardKind::Pad;
+    copy.padMode = side == 0 ? preset.leftPadMode : preset.rightPadMode;
+    copy.padSensitivity = side == 0 ? preset.leftPadSensitivity : preset.rightPadSensitivity;
+    rowClipboard = std::move(copy);
+    return true;
+}
+
+PasteBindingResult PastePadRow(size_t side) {
+    if (rowClipboard.kind == RowClipboardKind::None) return PasteBindingResult::Empty;
+    if (rowClipboard.kind != RowClipboardKind::Pad || side > 1 ||
+        selectedPreset >= presets.size()) return PasteBindingResult::Incompatible;
+    Preset previous = presets[selectedPreset];
+    auto& preset = presets[selectedPreset];
+    if (side == 0) {
+        preset.leftPadMode = rowClipboard.padMode;
+        preset.leftPadSensitivity = rowClipboard.padSensitivity;
+    } else {
+        preset.rightPadMode = rowClipboard.padMode;
+        preset.rightPadSensitivity = rowClipboard.padSensitivity;
+    }
+    if (!SavePresets()) {
+        preset = std::move(previous);
+        return PasteBindingResult::SaveFailed;
+    }
+    PublishSelectedPreset();
+    return PasteBindingResult::Pasted;
+}
+
+bool CopyStickRow() {
+    if (selectedPreset >= presets.size()) return false;
+    const auto& preset = presets[selectedPreset];
+    RowClipboard copy;
+    copy.kind = RowClipboardKind::Stick;
+    copy.leftDeadzone = preset.leftStickDeadzone;
+    copy.rightDeadzone = preset.rightStickDeadzone;
+    copy.leftOverlap = preset.leftStickOverlap;
+    copy.rightOverlap = preset.rightStickOverlap;
+    rowClipboard = std::move(copy);
+    return true;
+}
+
+PasteBindingResult PasteStickRow() {
+    if (rowClipboard.kind == RowClipboardKind::None) return PasteBindingResult::Empty;
+    if (rowClipboard.kind != RowClipboardKind::Stick ||
+        selectedPreset >= presets.size()) return PasteBindingResult::Incompatible;
+    Preset previous = presets[selectedPreset];
+    auto& preset = presets[selectedPreset];
+    preset.leftStickDeadzone = rowClipboard.leftDeadzone;
+    preset.rightStickDeadzone = rowClipboard.rightDeadzone;
+    preset.leftStickOverlap = rowClipboard.leftOverlap;
+    preset.rightStickOverlap = rowClipboard.rightOverlap;
+    if (!SavePresets()) {
+        preset = std::move(previous);
+        return PasteBindingResult::SaveFailed;
+    }
+    PublishSelectedPreset();
+    return PasteBindingResult::Pasted;
 }
 
 void UpdateRoleControls() {

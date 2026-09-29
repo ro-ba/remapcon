@@ -236,6 +236,33 @@ void OnWebMessage(const std::wstring& raw) {
             webUi.SendJson(L"{\"type\":\"updateInstallError\",\"code\":6}");
         return;
     }
+    if (command == L"copyRow" || command == L"pasteRow") {
+        uint32_t index = 0, layer = 0, preset = 0;
+        const bool selected = number(2, index) && number(3, layer) && number(4, preset) &&
+            preset == selectedPreset &&
+            layer == static_cast<uint32_t>(editedLayer);
+        const auto kind = arg(1);
+        std::wstring result;
+        if (command == L"copyRow") {
+            const bool copied = selected &&
+                ((kind == L"binding" && CopyBindingRow(index)) ||
+                 (kind == L"pad" && CopyPadRow(index)) ||
+                 (kind == L"stick" && index == 0 && CopyStickRow()));
+            result = copied ? L"copied" : L"incompatible";
+        } else {
+            const auto pasted = !selected ? PasteBindingResult::Incompatible :
+                kind == L"binding" ? PasteBindingRow(index) :
+                kind == L"pad" ? PastePadRow(index) :
+                kind == L"stick" && index == 0 ? PasteStickRow() :
+                PasteBindingResult::Incompatible;
+            result = pasted == PasteBindingResult::Pasted ? L"pasted" :
+                pasted == PasteBindingResult::Empty ? L"empty" :
+                pasted == PasteBindingResult::SaveFailed ? L"saveFailed" : L"incompatible";
+            if (pasted == PasteBindingResult::Pasted) SendUiState();
+        }
+        webUi.SendJson(L"{\"type\":\"rowClipboard\",\"result\":" + JsonString(result) + L"}");
+        return;
+    }
     bool okay = false;
     if (command == L"selectPreset") {
         uint32_t index = 0;
