@@ -73,6 +73,14 @@
       updateStartError: '更新用プログラムを起動できませんでした。RemapconUpdater.exeがアプリと同じフォルダにあるか確認してください。（E6）',
       updateChecksumError: 'ダウンロードしたZIPのSHA-256が一致しません。更新は中止しました。',
       updateReleaseError: '最新版が変わりました。もう一度「更新を確認」を押してください。',
+      shortcuts: 'ショートカット一覧', shortcutTab: '操作項目を順に移動', shortcutNavigation: '一覧内を移動', shortcutRegions: 'プリセット・レイヤー・設定行へ移動',
+      shortcutEdit: '設定行を編集', shortcutRename: '名前を変更', shortcutRemove: 'プリセット・レイヤーを削除／設定行を初期化',
+      shortcutDuplicate: 'プリセットを複製', shortcutMove: 'プリセットを移動', shortcutUndo: '設定変更を元に戻す',
+      shortcutRedo: 'やり直す', shortcutSettings: '設定を開く', shortcutHelp: 'この一覧を開く',
+      shortcutClose: 'メニュー・ダイアログを閉じる', shortcutNewPreset: 'プリセットを作成',
+      shortcutNewFolder: 'フォルダを作成', shortcutNewLayer: 'レイヤーを作成',
+      nothingToUndo: '元に戻せる変更はありません', nothingToRedo: 'やり直せる変更はありません',
+      undone: '元に戻しました', redone: 'やり直しました',
     },
     en: {
       inputTest: 'Find button', inputTestHelp: 'Press a controller button to highlight its settings row. No key input is sent while checking.',
@@ -139,6 +147,14 @@
       updateStartError: 'Could not start the updater. Check that RemapconUpdater.exe is in the app folder. (E6)',
       updateChecksumError: 'The ZIP SHA-256 did not match. The update was stopped.',
       updateReleaseError: 'The latest release changed. Check for updates again.',
+      shortcuts: 'Keyboard shortcuts', shortcutTab: 'Move between controls', shortcutNavigation: 'Move within a list', shortcutRegions: 'Focus presets, layers, or input rows',
+      shortcutEdit: 'Edit an input row', shortcutRename: 'Rename', shortcutRemove: 'Delete a preset or layer; reset an input row',
+      shortcutDuplicate: 'Duplicate a preset', shortcutMove: 'Move a preset', shortcutUndo: 'Undo a setting change',
+      shortcutRedo: 'Redo', shortcutSettings: 'Open settings', shortcutHelp: 'Open this list',
+      shortcutClose: 'Close a menu or dialog', shortcutNewPreset: 'Create preset',
+      shortcutNewFolder: 'Create folder', shortcutNewLayer: 'Create layer',
+      nothingToUndo: 'Nothing to undo', nothingToRedo: 'Nothing to redo',
+      undone: 'Undone', redone: 'Redone',
     },
   };
   let state = null;
@@ -154,6 +170,8 @@
   let lastInputSignature = "";
   let movingPreset = -1;
   let pendingDelete = null;
+  let shortcutsReturnFocus = null;
+  let lastMainFocus = null;
   let treeSignature = '';
   let startupReadySent = false;
   let warningDismissed = false;
@@ -330,6 +348,8 @@
   function translate() {
     document.documentElement.lang = lang();
     document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = tr(el.dataset.i18n); });
+    $('shortcuts-open').setAttribute('aria-label', tr('shortcuts'));
+    $('shortcuts-open').title = tr('shortcuts') + ' (F1)';
   }
   function folderChildren(parent) {
     return state.folders.filter(path => path !== parent &&
@@ -371,6 +391,17 @@
       current().layers.some(layer => layer.trigger === index);
     if (trigger) openDeleteDialog('resetBinding', index, buttonName(index));
     else send('resetBinding', index, state.editedLayer, state.selectedPreset);
+  }
+  function resetFocusedRow(row) {
+    const kind = row.dataset.rowKind;
+    if (kind === 'binding') requestBindingReset(Number(row.dataset.rowIndex));
+    else if (kind === 'pad') {
+      const left = Number(row.dataset.rowIndex) === 0;
+      send('setPadConfig', left ? 0 : current().leftPadMode,
+        left ? current().rightPadMode : 0,
+        left ? 100 : current().leftPadSensitivity,
+        left ? current().rightPadSensitivity : 100);
+    } else if (kind === 'stick') send('setStickConfig', 12288, 12288, 16000, 16000);
   }
   function openDeleteDialog(command, target, name) {
     pendingDelete = {command, target, name, presetIndex: state.selectedPreset, layerIndex: state.editedLayer};
@@ -455,6 +486,7 @@
       const expanded = !openFolders.has('!' + path);
       const toggle = document.createElement('button'); toggle.type = 'button'; toggle.className = 'folder-toggle';
       toggle.setAttribute('aria-expanded', String(expanded)); toggle.textContent = (expanded ? '▾ ' : '▸ ') + name;
+      toggle.dataset.folder = path;
       toggle.onclick = () => {
         const next = toggle.getAttribute('aria-expanded') !== 'true';
         if (next) openFolders.delete('!' + path); else openFolders.add('!' + path);
@@ -493,6 +525,7 @@
       const button = document.createElement('button'); button.type = 'button';
       button.textContent = label; button.className = state.editedLayer === index ? 'active' : '';
       button.setAttribute('role','tab'); button.setAttribute('aria-selected', String(index === state.editedLayer));
+      button.dataset.layer = String(index);
       button.onclick = () => send('selectLayer', index);
       if (index) {
         const layerIndex = index - 1;
@@ -674,6 +707,9 @@
     }
   }
   function renderDetails() {
+    const active = document.activeElement;
+    const focusRow = active?.classList.contains('input-row') ? [active.dataset.rowKind, active.dataset.rowIndex] : null;
+    const focusLayer = active?.dataset.layer;
     renderLayers(); renderRows();
     $('preset-title').textContent = current().name;
     $('preset-path').textContent = current().folder;
@@ -696,9 +732,16 @@
     $('connection').title = statusText(state.status || tr('waiting'));
     $('status').textContent = statusText(state.status || '');
     document.body.classList.add('ui-ready');
+    if (focusRow) (document.querySelector('.input-row[data-row-kind="' + focusRow[0] + '"][data-row-index="' + focusRow[1] + '"]') ||
+      document.querySelector('.input-row'))?.focus();
+    else if (focusLayer !== undefined) ($('layer-tabs').querySelector('[data-layer="' + focusLayer + '"]') ||
+      $('layer-tabs').querySelector('[data-layer="' + state.editedLayer + '"]'))?.focus();
   }
   function render() {
     if (!state) return;
+    const focusedPreset = document.activeElement?.classList.contains('preset-row') ?
+      document.activeElement.dataset.preset : null;
+    const focusedFolder = document.activeElement?.dataset.folder;
     translate();
     renderUpdateStatus();
     $('admin-warning').hidden = state.elevated !== false || warningDismissed;
@@ -708,11 +751,40 @@
     if (nextSignature !== treeSignature) { renderTree(); treeSignature = nextSignature; }
     else updateTreeSelection();
     renderCategory(); renderDetails();
+    if (focusedPreset !== null) (document.querySelector('.preset-row[data-preset="' + focusedPreset + '"]') ||
+      document.querySelector('.preset-row.active'))?.focus();
+    else if (focusedFolder !== undefined) ([...document.querySelectorAll('.folder-toggle')]
+      .find(item => item.dataset.folder === focusedFolder) ||
+      document.querySelector('.preset-row.active'))?.focus();
   }
   function close(id) {
     $(id).hidden = true; captureTarget = '';
+    if (!document.querySelector('.scrim:not([hidden])')) {
+      const target = id === 'shortcuts-dialog' ? shortcutsReturnFocus : lastMainFocus;
+      if (target?.isConnected) target.focus();
+    }
     if (id === 'delete-dialog') pendingDelete = null;
     if (id === 'stick-dialog' && stickPreviewOwned) { stickPreviewOwned = false; send('setPreview', 0); }
+  }
+  const shortcuts = [
+    ['shortcutHelp','F1'], ['shortcutClose','Esc'], ['shortcutTab','Tab / Shift+Tab'],
+    ['shortcutRegions','Alt+1 / Alt+2 / Alt+3'], ['shortcutNavigation','↑ / ↓ / ← / →'],
+    ['shortcutEdit','Enter'], ['shortcutRename','F2'], ['shortcutRemove','Delete'],
+    ['shortcutNewPreset','Ctrl+N'], ['shortcutNewFolder','Ctrl+Shift+N'],
+    ['shortcutNewLayer','Ctrl+Shift+L'], ['shortcutDuplicate','Ctrl+D'],
+    ['shortcutMove','Ctrl+M'], ['copyRow','Ctrl+C'], ['pasteRow','Ctrl+V'],
+    ['shortcutUndo','Ctrl+Z'], ['shortcutRedo','Ctrl+Y / Ctrl+Shift+Z'],
+    ['shortcutSettings','Ctrl+,'],
+  ];
+  function openShortcuts() {
+    shortcutsReturnFocus = document.activeElement;
+    $('shortcuts-list').replaceChildren(...shortcuts.flatMap(([label, keys]) => {
+      const name = document.createElement('span'); name.className = 'shortcut-label'; name.textContent = tr(label);
+      const key = document.createElement('span'); key.className = 'shortcut-keys'; key.textContent = keys;
+      return [name, key];
+    }));
+    $('shortcuts-dialog').hidden = false;
+    $('shortcuts-dialog').querySelector('.close').focus();
   }
   function openName(mode, target) {
     naming = {mode,target};
@@ -765,6 +837,9 @@
   }
   function renderSequence() { $('sequence-keys').innerHTML = sequenceKeys.map(key => '<span>' + esc(displayKey(key)) + '</span>').join(''); }
   $('sidebar-toggle').onclick = () => { collapsed = !collapsed; $('layout').classList.toggle('collapsed', collapsed); };
+  document.addEventListener('focusin', event => {
+    if (!event.target.closest('.scrim')) lastMainFocus = event.target;
+  });
   $('titlebar').addEventListener('mousedown', event => {
     if (event.button !== 0 || event.target.closest('button')) return;
     send('windowDrag');
@@ -806,6 +881,7 @@
   setInterval(() => { if (state && document.visibilityState === 'visible') renderTargetIcon(); }, 30000);
   $('category').onchange = event => { category = Number(event.target.value); renderRows(); };
   $('settings-open').onclick = () => { $('settings').hidden = false; $('language').focus(); };
+  $('shortcuts-open').onclick = openShortcuts;
   $('check-updates').onclick = checkUpdates;
   $('open-release').onclick = () => send('openReleases');
   $('install-update').onclick = () => {
@@ -897,10 +973,66 @@
       return;
     }
     if (event.key === 'Escape') {
-      for (const id of ['already-running-dialog','update-dialog','delete-dialog','import-dialog','close-dialog','editor','name-dialog','move-dialog','pad-dialog','stick-dialog','settings']) if (!$(id).hidden) {
+      for (const id of ['already-running-dialog','update-dialog','delete-dialog','import-dialog','close-dialog','editor','name-dialog','move-dialog','pad-dialog','stick-dialog','settings','shortcuts-dialog']) if (!$(id).hidden) {
         close(id); event.preventDefault(); return;
       }
     }
+    if (!$('shortcuts-dialog').hidden && event.key === 'Tab') {
+      $('shortcuts-dialog').querySelector('.close').focus();
+      event.preventDefault(); return;
+    }
+    if (!state || event.isComposing || event.key === 'Process' || event.metaKey ||
+        document.querySelector('.scrim:not([hidden])') || !$('context-menu').hidden) return;
+    const active = document.activeElement;
+    if (active?.matches('input, select, textarea, [contenteditable="true"]')) return;
+    const row = active?.classList.contains('input-row') ? active : null;
+    const preset = active?.classList.contains('preset-row') ? Number(active.dataset.preset) : -1;
+    const layer = active?.dataset.layer === undefined ? -1 : Number(active.dataset.layer);
+    const folder = active?.dataset.folder;
+    const key = event.key.toLowerCase();
+    const ctrl = event.ctrlKey && !event.altKey;
+    const plain = !event.ctrlKey && !event.altKey && !event.shiftKey;
+    let handled = true;
+    if (event.key === 'F1' && plain) openShortcuts();
+    else if (event.altKey && !event.ctrlKey && !event.shiftKey && ['1','2','3'].includes(event.key)) {
+      const target = event.key === '1' ? document.querySelector('.preset-row.active') :
+        event.key === '2' ? $('layer-tabs').querySelector('[data-layer="' + state.editedLayer + '"]') :
+        document.querySelector('.input-row.selected, .input-row');
+      if (event.key === '1' && collapsed) $('sidebar-toggle').click();
+      target?.focus();
+    }
+    else if (ctrl && key === 'z') send(event.shiftKey ? 'redo' : 'undo');
+    else if (ctrl && !event.shiftKey && key === 'y') send('redo');
+    else if (ctrl && !event.shiftKey && key === ',') $('settings-open').click();
+    else if (ctrl && !event.shiftKey && key === 'n') $('preset-new').click();
+    else if (ctrl && event.shiftKey && key === 'n') $('folder-new').click();
+    else if (ctrl && event.shiftKey && key === 'l') openName('layer-new','');
+    else if (ctrl && !event.shiftKey && key === 'd') openName('preset-copy', String(preset >= 0 ? preset : state.selectedPreset));
+    else if (ctrl && !event.shiftKey && key === 'm') openMove(preset >= 0 ? preset : state.selectedPreset);
+    else if ((event.key === 'F2' && plain) && preset >= 0) openName('preset-rename', String(preset));
+    else if (event.key === 'F2' && plain && layer > 0) openName('layer-rename', String(layer - 1));
+    else if (event.key === 'F2' && plain && folder !== undefined) openName('folder-rename', folder);
+    else if (event.key === 'F2' && plain && row) row.ondblclick();
+    else if (event.key === 'Delete' && plain && preset >= 0 && state.presets.length > 1) confirmDeletePreset(preset);
+    else if (event.key === 'Delete' && plain && layer > 0) confirmDeleteLayer(layer - 1);
+    else if (event.key === 'Delete' && plain && folder !== undefined) confirmDeleteFolder(folder);
+    else if (event.key === 'Delete' && plain && row) resetFocusedRow(row);
+    else if (plain && (event.key === 'ArrowUp' || event.key === 'ArrowDown') &&
+             (preset >= 0 || folder !== undefined || row)) {
+      const items = row ? [...$('rows').querySelectorAll('.input-row')] :
+        [...$('preset-tree').querySelectorAll('.folder-toggle, .preset-row')].filter(item => item.getClientRects().length);
+      const index = items.indexOf(active);
+      items[Math.max(0, Math.min(items.length - 1, index + (event.key === 'ArrowDown' ? 1 : -1)))]?.focus();
+    }
+    else if (plain && (event.key === 'ArrowLeft' || event.key === 'ArrowRight') && layer >= 0) {
+      const tabs = [...$('layer-tabs').querySelectorAll('[data-layer]')];
+      tabs[Math.max(0, Math.min(tabs.length - 1, layer + (event.key === 'ArrowRight' ? 1 : -1)))]?.focus();
+    }
+    else if (plain && (event.key === 'ArrowLeft' || event.key === 'ArrowRight') && folder !== undefined) {
+      if ((event.key === 'ArrowRight') !== (active.getAttribute('aria-expanded') === 'true')) active.click();
+    }
+    else handled = false;
+    if (handled) { event.preventDefault(); event.stopPropagation(); }
   }, true);
   $('name-save').onclick = () => {
     const name = $('name-input').value.trim(); if (!name) { toast(tr('invalidName')); return; }
@@ -945,6 +1077,9 @@
         if (row) row.focus();
       }
     }
+    else if (message.type === 'history') toast(tr(message.ok ?
+      (message.action === 'undo' ? 'undone' : 'redone') : message.empty ?
+      (message.action === 'undo' ? 'nothingToUndo' : 'nothingToRedo') : 'rowSaveFailed'), 1600);
     else if (message.type === 'updateInstallError') {
       updateFailure = ({1:'updateNetworkError',2:'updateReleaseError',3:'updateDownloadError',
         4:'updateChecksumError',5:'updateExtractError',6:'updateStartError'})[message.code] || 'updateInstallError';

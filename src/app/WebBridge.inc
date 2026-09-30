@@ -183,6 +183,44 @@ bool NameAvailable(const std::wstring& name, const std::wstring& folder, size_t 
             _wcsicmp(presets[index].name.c_str(), name.c_str()) == 0) return false;
     return true;
 }
+struct UiHistoryEntry {
+    ConfigSnapshot config;
+    int layer = 0;
+};
+std::vector<UiHistoryEntry> uiUndo, uiRedo;
+UiHistoryEntry CurrentUiHistory() {
+    return {{language, closeBehavior, autoMode.load(), steamTakeover.load(),
+             selectedPreset, folders, presets}, editedLayer};
+}
+void RecordUiChange(UiHistoryEntry&& before, const std::wstring& beforeJson) {
+    if (ConfigJson() == beforeJson) return;
+    if (uiUndo.size() == 30) uiUndo.erase(uiUndo.begin());
+    uiUndo.push_back(std::move(before));
+    uiRedo.clear();
+}
+bool RestoreUiHistory(std::vector<UiHistoryEntry>& from,
+                      std::vector<UiHistoryEntry>& to) {
+    if (from.empty()) return false;
+    auto current = CurrentUiHistory();
+    const bool currentRequested = requested.load();
+    auto previous = std::move(from.back());
+    from.pop_back();
+    ApplyConfig(std::move(previous.config));
+    editedLayer = previous.layer <= static_cast<int>(presets[selectedPreset].layers.size()) ?
+                  previous.layer : 0;
+    if (autoMode) requested = false;
+    if (!SavePresets()) {
+        auto failed = CurrentUiHistory();
+        ApplyConfig(std::move(current.config));
+        editedLayer = current.layer;
+        requested = currentRequested;
+        from.push_back(std::move(failed));
+        return false;
+    }
+    if (to.size() == 30) to.erase(to.begin());
+    to.push_back(std::move(current));
+    return true;
+}
 void OnWebMessage(const std::wstring& raw) {
     const auto args = DecodeMessage(raw);
     if (args.empty()) return;
@@ -191,6 +229,16 @@ void OnWebMessage(const std::wstring& raw) {
         return index < args.size() && ParseNumber(args[index], value);
     };
     const std::wstring& command = args[0];
+    if (command == L"undo" || command == L"redo") {
+        const bool empty = command == L"undo" ? uiUndo.empty() : uiRedo.empty();
+        const bool okay = command == L"undo" ? RestoreUiHistory(uiUndo, uiRedo) :
+                                               RestoreUiHistory(uiRedo, uiUndo);
+        webUi.SendJson(L"{\"type\":\"history\",\"action\":" + JsonString(command) +
+                       L",\"okay\":" + JsonBool(okay) + L",\"empty\":" +
+                       JsonBool(empty) + L"}");
+        if (okay) SendUiState();
+        return;
+    }
     if (command == L"ready") {
         webReady = true; SendUiState();
         webUi.SendJson(std::wstring(L"{\"type\":\"window\",\"maximized\":") +
@@ -237,6 +285,8 @@ void OnWebMessage(const std::wstring& raw) {
         return;
     }
     if (command == L"copyRow" || command == L"pasteRow") {
+        auto before = command == L"pasteRow" ? CurrentUiHistory() : UiHistoryEntry{};
+        const auto beforeJson = command == L"pasteRow" ? ConfigJson() : std::wstring{};
         uint32_t index = 0, layer = 0, preset = 0;
         const bool selected = number(2, index) && number(3, layer) && number(4, preset) &&
             preset == selectedPreset &&
@@ -258,11 +308,19 @@ void OnWebMessage(const std::wstring& raw) {
             result = pasted == PasteBindingResult::Pasted ? L"pasted" :
                 pasted == PasteBindingResult::Empty ? L"empty" :
                 pasted == PasteBindingResult::SaveFailed ? L"saveFailed" : L"incompatible";
-            if (pasted == PasteBindingResult::Pasted) SendUiState();
+            if (pasted == PasteBindingResult::Pasted) {
+                RecordUiChange(std::move(before), beforeJson);
+                SendUiState();
+            }
         }
         webUi.SendJson(L"{\"type\":\"rowClipboard\",\"result\":" + JsonString(result) + L"}");
         return;
     }
+    const bool undoable = command != L"selectPreset" && command != L"selectLayer" &&
+        command != L"toggleMode" && command != L"setPreview" &&
+        command != L"import" && command != L"export";
+    auto before = undoable ? CurrentUiHistory() : UiHistoryEntry{};
+    const auto beforeJson = undoable || command == L"import" ? ConfigJson() : std::wstring{};
     bool okay = false;
     if (command == L"selectPreset") {
         uint32_t index = 0;
@@ -568,6 +626,8 @@ void OnWebMessage(const std::wstring& raw) {
         }
         return;
     }
+    if (command == L"import" && ConfigJson() != beforeJson) { uiUndo.clear(); uiRedo.clear(); }
+    else if (okay && undoable) RecordUiChange(std::move(before), beforeJson);
     if (!okay) UiError(L"設定を保存できませんでした。入力内容を確認してください。");
     SendUiState();
 }

@@ -19,6 +19,7 @@ It is also useful for apps you want to control with keyboard and mouse bindings 
 - Adjustable deadzones and diagonal overlap for each stick, with a live response preview
 - Layers, turbo, and key sequences
 - Copy and paste a settings row across buttons, layers, or presets with Ctrl+C / Ctrl+V
+- Navigate presets, layers, and input rows with the keyboard; open the shortcut list with the top-right **?** button or F1
 - Automatic activation while the target app is in the foreground
 - Optional exclusive handoff while Steam is running: Remapcon takes the controller for the target app and returns it to Steam when you leave (requires administrator privileges)
 - JSON import and export
@@ -36,6 +37,8 @@ You need Windows 10/11 and a 2026 Steam Controller / Puck. Install the [Microsof
 1. If Steam is using the controller, close Steam or configure **Use alongside Steam** below.
 2. Create a preset and use **Choose app** to select the target executable.
 3. Double-click a mapping row to edit it. Select a row and press Ctrl+C / Ctrl+V to copy its settings to another row. Turn on **Auto enable in target app** to activate the preset while that app is in the foreground.
+
+For keyboard navigation, press Alt+1/2/3 to focus presets, layers, or input rows. F2 renames, Delete removes an item or resets an input row, and Ctrl+Z undoes a settings change. The top-right **?** button lists all shortcuts.
 
 If the target app runs as administrator, run Remapcon as administrator too.
 
