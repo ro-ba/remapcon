@@ -9,7 +9,7 @@ from pathlib import Path
 import sys
 
 root = Path(__file__).resolve().parents[2]
-source = (root / 'src/app/main.cpp').read_text()
+source = (root / 'src/app/main.cpp').read_text(encoding='utf-8')
 def part(start, end):
     return source[source.index(start):source.index(end)]
 
@@ -150,4 +150,4 @@ int main(int argc, char** argv) {
     }
 }
 '''
-Path(sys.argv[1]).write_text(header + models + globals_code + functions + main)
+Path(sys.argv[1]).write_text(header + models + globals_code + functions + main, encoding='utf-8')

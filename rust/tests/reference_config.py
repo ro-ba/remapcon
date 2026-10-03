@@ -9,8 +9,8 @@ from pathlib import Path
 import sys
 
 root = Path(__file__).resolve().parents[2]
-source = (root / 'src/app/main.cpp').read_text()
-codec = (root / 'src/app/SettingsJson.inc').read_text()
+source = (root / 'src/app/main.cpp').read_text(encoding='utf-8')
+codec = (root / 'src/app/SettingsJson.inc').read_text(encoding='utf-8')
 def part(start, end):
     return source[source.index(start):source.index(end)]
 
@@ -112,9 +112,9 @@ functions += codec[codec.index('void ApplyConfig'):]
 functions += part('bool SetBinding(size_t button', 'void UpdatePresetBox()')
 functions += part('bool SelectPreset(size_t index)', 'void UpdateRoleControls()')
 functions += part('void ImportSettings(HWND window)', 'void ShowPopup(HWND window')
-bridge = (root / 'src/app/WebBridge.inc').read_text()
+bridge = (root / 'src/app/WebBridge.inc').read_text(encoding='utf-8')
 functions += bridge
-updater = (root / 'src/app/Updater.cpp').read_text()
+updater = (root / 'src/app/Updater.cpp').read_text(encoding='utf-8')
 functions += updater[updater.index('bool Utf8ToWide('):updater.index('bool WriteFileBytes(')]
 functions += '\nnamespace fs = std::filesystem;\n'
 functions += updater[updater.index('bool ApplyPackage('):updater.index('void NotifyFailure(')]
@@ -269,4 +269,4 @@ int wmain(int argc, wchar_t** argv) {
     return WriteUtf8File(argv[3],ConfigJson()) ? 0 : 3;
 }
 '''
-Path(sys.argv[1]).write_text(header + models + globals_code + functions + main)
+Path(sys.argv[1]).write_text(header + models + globals_code + functions + main, encoding='utf-8')
