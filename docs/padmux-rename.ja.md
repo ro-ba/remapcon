@@ -56,3 +56,5 @@ SteamlessController／MapleStory由来のlicense、INI section／format、生成
 2026-10-04に実機確認を再開。改名後のRustでUSB列挙／入力／Lizard制御／振動／通常マウス復帰が合格し、変更なしのC++ HID参照とtransport・caps・report ID／sizeが一致。詳しい記録と残るgateは [移行進捗](rust-migration-progress.ja.md) を参照。実更新・GitHub CI・残りの実機gateが完了するまでC++実装を保持する。
 
 2026-10-04追加確認：USBのkeyboard／mouse出力、Steam共存／再接続、Puckの通常配布候補GUIとlayers／turbo／sequencesが実機合格。旧設定JSON／配置hashは不変。最新公開releaseは旧C++ assetのみであり、Rustの実更新とGitHub CIは未確認のまま。
+
+GitHub CI追加確認：修正commit `7296ead` のC++／Rust Windows build／test／packagingがともに成功。実際のCI ZIPのlicenses／PadMux resource／両updaterによるdigest検証とRust GUI自動診断も合格。詳細・run linksは移行進捗を参照。main／本番releaseは変更していない。

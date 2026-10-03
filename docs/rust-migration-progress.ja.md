@@ -211,10 +211,20 @@ Steam起動中のwired再接続180秒も合格。取得中にUSBを抜き、1,94
 - そのためGitHub経由のRust package実download→install→restartを合格としない。旧assetを改名してRust packageと見せかけることも行わない。テスト配布元・候補releaseを確定してから実更新する。既存のZIP検証／配置・復旧／updater IPCの合格記録はPhase 10を参照。
 - Rust workflow／ローカル候補ZIPは作成済みだが、未commit／未pushのためGitHub上で今回の変更を実行していない。GitHub CI／artifactと実更新の確認前にproduction releaseをRustへ切り替えず、C++実装を削除しない。
 
+## 2026-10-04 — GitHub CI／artifact確認
+
+- 作業branch `ro-ba/rewright-rust-project` にmigration／改名をcommitしpush。初回pushはOAuthのworkflow scope不足で拒否されたが、ユーザーが追加認証を承認して解消。mainへのmerge／release公開は行っていない。
+- 初回Rust CIはPythonのcp1252既定decodeで参照C++生成に失敗。`reference_config.py`／`reference_mapping.py` のread／writeをUTF-8へ明示した `7296ead` で修正。非UTF-8既定を再現したチェックが合格し、生成C++ bytesは従来のUTF-8環境と同一。
+- [Rust CI 37138317362](https://github.com/ro-ba/padmux/actions/runs/37138317362) 成功。fmt、変更なしのC++参照build、Clippy（warnings拒否）、25 tests、debug／release build、help、package／static CRT／licenses／ZIP／digest検証、artifact uploadが合格。
+- 同じcommitの [C++ CI 37138534212](https://github.com/ro-ba/padmux/actions/runs/37138534212) をbranch指定のworkflow_dispatchで実行し成功。C++ GUI／updater Release build、CPack、tag／digest／ZIP内容検証、artifact uploadが合格。tag release公開stepはbranch実行のためskip。
+- 実際のCI artifactをTEMPへdownload。Rust ZIP SHA-256 `7b80b3ff82cc8be25eb7c6acb8e3ed846f0474a5e08b142734ea2ed2566018e6`、C++ ZIP SHA-256 `d020e1e0b1a6508d39dbb404ff22c426d70092d3ddb7f6e2b154690853cf49a8`。両MIT copyright／SteamlessController notice、Rust依存全文、PadMux native resourceを確認。
+- CI製C++／Rust双方のupdaterが両ZIPを受理し、全組合せで誤digestを拒否。CI製Rust exeを `check-gui.ps1` でstartup／編集・履歴／tray・配置、updater IPCまで実行。両ケースexit 0／stderr空。HID取得／OS入力／本来の設定保存は行わない。ログはTEMP `padmux-gui-check-6e523534-e106-441a-8d5f-0af0660a370b`。
+- 実GitHub download→controller返却／GUI終了→exe配置→再起動の一連の実更新は引き続き未確認。GitHub最新releaseは旧C++ ZIPのみのため、CI成功を実更新成功と置き換えない。テスト候補の公開と試験方法を確定してから進める。
+
 ## Phase 11 — C++削除前の未完了gate
 
 - PuckのHID／再接続／制御／出力／Steam handoff、設定互換、mapping trace、WebView UIの確認は上記の通り合格。
-- wiredの列挙／入力／制御／出力／再接続／Steam handoffは2026-10-04の上記実機試験で合格。通常配布GUIのPuck入力・layer／turbo／sequence・Steam返却も合格。updater実更新、GitHub上のrelease build／packaging確認が残る。Bluetooth／Nereidは機材がなく未確認。C++ source／CMakeを保持し、現時点では削除しない。
+- wiredの列挙／入力／制御／出力／再接続／Steam handoffは2026-10-04の上記実機試験で合格。通常配布GUIのPuck入力・layer／turbo／sequence・Steam返却も合格。GitHub上のC++／Rust build／packagingとCI artifact GUI検証も合格。updater実更新が残る。Bluetooth／Nereidは機材がなく未確認。C++ source／CMakeを保持し、現時点では削除しない。
 
 ## 差異・license
 
