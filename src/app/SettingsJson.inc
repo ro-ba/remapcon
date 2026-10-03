@@ -309,8 +309,13 @@ bool LoadSettings() {
     }
     const std::wstring jsonPath = settingsPath;
     const std::wstring newFolder = settingsPath.substr(0, settingsPath.find_last_of(L"\\/"));
+    // Prefer the immediately previous product's settings. Never overwrite or
+    // delete old data, and never hide malformed old JSON with a fresh config.
+    const std::wstring parent = newFolder.substr(0, newFolder.find_last_of(L"\\/"));
+    const std::wstring previousFolder = parent + L"\\Remapcon";
     const std::wstring legacyFolder =
-        newFolder.substr(0, newFolder.find_last_of(L"\\/")) + L"\\SteamlessController";
+        GetFileAttributesW((previousFolder + L"\\ControllerSettings.json").c_str()) != INVALID_FILE_ATTRIBUTES
+        ? previousFolder : parent + L"\\SteamlessController";
     const std::wstring legacyJson = legacyFolder + L"\\ControllerSettings.json";
     const std::wstring legacyIni = legacyFolder + L"\\MapleStoryController.ini";
     if (GetFileAttributesW(legacyJson.c_str()) != INVALID_FILE_ATTRIBUTES) {
@@ -327,6 +332,9 @@ bool LoadSettings() {
         PublishSelectedPreset();
     }
     if (!SavePresets()) return false;
+    CopyFileW((previousFolder + L"\\WindowPlacement.ini").c_str(),
+              (newFolder + L"\\WindowPlacement.ini").c_str(), TRUE);
+    CopyLegacyIconCache(previousFolder, newFolder);
     CopyFileW((legacyFolder + L"\\WindowPlacement.ini").c_str(),
               (newFolder + L"\\WindowPlacement.ini").c_str(), TRUE);
     CopyLegacyIconCache(legacyFolder, newFolder);

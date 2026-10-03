@@ -1,4 +1,6 @@
 build/
+rust/target/
+rust/dist/
 out/
 cmake-build-*/
 CMakeFiles/

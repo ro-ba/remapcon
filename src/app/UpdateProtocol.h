@@ -17,8 +17,8 @@ inline bool ValidUpdateTag(const std::wstring& tag) {
     return dots == 2 && digit;
 }
 
-constexpr UINT WM_REMAPCON_UPDATE_READY = WM_APP + 7;
-constexpr UINT WM_REMAPCON_UPDATE_FAILED = WM_APP + 8;
+constexpr UINT WM_PADMUX_UPDATE_READY = WM_APP + 7;
+constexpr UINT WM_PADMUX_UPDATE_FAILED = WM_APP + 8;
 
 enum class UpdateFailure : WPARAM {
     Network = 1,

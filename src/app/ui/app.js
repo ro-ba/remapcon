@@ -64,13 +64,13 @@
       updateError: '確認できませんでした。ネット接続を確認して、もう一度お試しください。',
       updateOpenError: 'リリースページを開けませんでした。',
       installUpdate: '更新して再起動', updateConfirmTitle: '更新して再起動',
-      updateConfirmText: 'Remapcon {version} をダウンロードして検証します。準備ができたらアプリを終了し、更新後に再起動します。',
+      updateConfirmText: 'PadMux {version} をダウンロードして検証します。準備ができたらアプリを終了し、更新後に再起動します。',
       updateInstalling: '更新ファイルをダウンロード・検証しています。完了後に再起動します…',
       updateInstallError: '更新に失敗しました。もう一度お試しいただくか、リリースページから手動で更新してください。',
       updateNetworkError: 'GitHubへの接続に失敗しました。ネットワークを確認してください。（E1）',
       updateDownloadError: '更新用ZIPをダウンロードできませんでした。（E3）',
       updateExtractError: '更新用ZIPを展開できませんでした。（E5）',
-      updateStartError: '更新用プログラムを起動できませんでした。RemapconUpdater.exeがアプリと同じフォルダにあるか確認してください。（E6）',
+      updateStartError: '更新用プログラムを起動できませんでした。padmux-updater.exeがアプリと同じフォルダにあるか確認してください。（E6）',
       updateChecksumError: 'ダウンロードしたZIPのSHA-256が一致しません。更新は中止しました。',
       updateReleaseError: '最新版が変わりました。もう一度「更新を確認」を押してください。',
       shortcuts: 'ショートカット一覧', shortcutTab: '操作項目を順に移動', shortcutNavigation: '一覧内を移動', shortcutRegions: 'プリセット・レイヤー・設定行へ移動',
@@ -138,13 +138,13 @@
       updateError: 'Could not check for updates. Check your connection and try again.',
       updateOpenError: 'Could not open the release page.',
       installUpdate: 'Update and restart', updateConfirmTitle: 'Update and restart',
-      updateConfirmText: 'Download and verify Remapcon {version}. When ready, the app will close, update, and restart.',
+      updateConfirmText: 'Download and verify PadMux {version}. When ready, the app will close, update, and restart.',
       updateInstalling: 'Downloading and verifying the update. The app will restart when ready…',
       updateInstallError: 'Update failed. Try again or update manually from the release page.',
       updateNetworkError: 'Could not connect to GitHub. Check your network connection. (E1)',
       updateDownloadError: 'Could not download the update ZIP. (E3)',
       updateExtractError: 'Could not extract the update ZIP. (E5)',
-      updateStartError: 'Could not start the updater. Check that RemapconUpdater.exe is in the app folder. (E6)',
+      updateStartError: 'Could not start the updater. Check that padmux-updater.exe is in the app folder. (E6)',
       updateChecksumError: 'The ZIP SHA-256 did not match. The update was stopped.',
       updateReleaseError: 'The latest release changed. Check for updates again.',
       shortcuts: 'Keyboard shortcuts', shortcutTab: 'Move between controls', shortcutNavigation: 'Move within a list', shortcutRegions: 'Focus presets, layers, or input rows',
@@ -217,7 +217,7 @@
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000);
     try {
-      const response = await fetch('https://api.github.com/repos/ro-ba/remapcon/releases/latest', {
+      const response = await fetch('https://api.github.com/repos/ro-ba/padmux/releases/latest', {
         headers: {Accept: 'application/vnd.github+json'}, cache: 'no-store', signal: controller.signal
       });
       if (!response.ok) throw new Error('GitHub response: ' + response.status);

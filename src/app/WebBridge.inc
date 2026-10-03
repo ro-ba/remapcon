@@ -273,7 +273,7 @@ void OnWebMessage(const std::wstring& raw) {
     }
     if (command == L"openReleases") {
         const auto result = ShellExecuteW(mainWindow, L"open",
-            L"https://github.com/ro-ba/remapcon/releases/latest",
+            L"https://github.com/ro-ba/padmux/releases/latest",
             nullptr, nullptr, SW_SHOWNORMAL);
         if (reinterpret_cast<INT_PTR>(result) <= 32)
             webUi.SendJson(L"{\"type\":\"updateOpenError\"}");

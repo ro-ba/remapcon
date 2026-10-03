@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(Remapcon VERSION 1.7.0 LANGUAGES CXX)
+project(PadMux VERSION 1.7.0 LANGUAGES CXX)
 
 include(FetchContent)
 set(CMAKE_CXX_STANDARD 20)
@@ -29,19 +29,19 @@ endif()
 set(APP_UI_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src/app/ui")
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
     "${APP_UI_DIR}/index.html" "${APP_UI_DIR}/style.css" "${APP_UI_DIR}/app.js"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/app/resources/remapcon.svg")
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/app/resources/padmux.svg")
 file(READ "${APP_UI_DIR}/index.html" APP_UI_HTML)
 file(READ "${APP_UI_DIR}/style.css" APP_UI_CSS)
 file(READ "${APP_UI_DIR}/app.js" APP_UI_JS)
-file(READ "${CMAKE_CURRENT_SOURCE_DIR}/src/app/resources/remapcon.svg" APP_BRAND_SVG)
+file(READ "${CMAKE_CURRENT_SOURCE_DIR}/src/app/resources/padmux.svg" APP_BRAND_SVG)
 string(REPLACE "<!-- STYLE -->" "<style>${APP_UI_CSS}</style>" APP_UI_HTML "${APP_UI_HTML}")
 string(REPLACE "<!-- SCRIPT -->" "<script>${APP_UI_JS}</script>" APP_UI_HTML "${APP_UI_HTML}")
 string(REPLACE "<!-- BRAND_ICON -->" "${APP_BRAND_SVG}" APP_UI_HTML "${APP_UI_HTML}")
-string(REPLACE "__REMAPCON_VERSION__" "${PROJECT_VERSION}" APP_UI_HTML "${APP_UI_HTML}")
+string(REPLACE "__PADMUX_VERSION__" "${PROJECT_VERSION}" APP_UI_HTML "${APP_UI_HTML}")
 string(REPLACE "\n" "\n)MAPLEUI\",\n    LR\"MAPLEUI(" MAPLE_UI_HTML "${APP_UI_HTML}")
 configure_file(src/app/ui_embedded.h.in "${CMAKE_CURRENT_BINARY_DIR}/maple_ui_embedded.h" @ONLY)
 
-add_executable(Remapcon WIN32
+add_executable(padmux WIN32
     src/app/main.cpp
     src/app/SettingsJson.inc
     src/app/SimpleJson.h
@@ -53,34 +53,34 @@ add_executable(Remapcon WIN32
     src/app/WebUi.cpp
     src/app/resources/app.rc
 )
-target_include_directories(Remapcon PRIVATE
+target_include_directories(padmux PRIVATE
     "${CMAKE_CURRENT_BINARY_DIR}"
     "${webview2_SOURCE_DIR}/build/native/include")
-target_link_libraries(Remapcon PRIVATE
+target_link_libraries(padmux PRIVATE
     SteamController user32 shell32 comdlg32 ole32 dwmapi advapi32 windowscodecs cfgmgr32
     "${webview2_SOURCE_DIR}/build/native/${WV2_ARCH}/WebView2LoaderStatic.lib")
 if(MSVC)
-    target_compile_options(Remapcon PRIVATE /W4 /WX /utf-8)
+    target_compile_options(padmux PRIVATE /W4 /WX /utf-8)
 endif()
 
-add_executable(RemapconUpdater WIN32
+add_executable(padmux-updater WIN32
     src/app/Updater.cpp
     src/app/SimpleJson.h
     src/app/UpdateProtocol.h
 )
-target_link_libraries(RemapconUpdater PRIVATE winhttp bcrypt shell32)
+target_link_libraries(padmux-updater PRIVATE winhttp bcrypt shell32)
 if(MSVC)
-    target_compile_options(RemapconUpdater PRIVATE /W4 /WX /utf-8)
+    target_compile_options(padmux-updater PRIVATE /W4 /WX /utf-8)
 endif()
 
-install(TARGETS Remapcon RUNTIME DESTINATION .)
-install(TARGETS RemapconUpdater RUNTIME DESTINATION .)
+install(TARGETS padmux RUNTIME DESTINATION .)
+install(TARGETS padmux-updater RUNTIME DESTINATION .)
 install(FILES LICENSE README.md README.ja.md THIRD_PARTY_NOTICES.md DESTINATION .)
 install(FILES LICENSES/WebView2-LICENSE.txt LICENSES/WebView2-NOTICE.txt
     DESTINATION LICENSES)
 
 set(CPACK_GENERATOR ZIP)
-set(CPACK_PACKAGE_NAME Remapcon)
+set(CPACK_PACKAGE_NAME padmux)
 set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
-set(CPACK_PACKAGE_FILE_NAME "Remapcon-Windows-${WV2_ARCH}")
+set(CPACK_PACKAGE_FILE_NAME "padmux-windows-${WV2_ARCH}")
 include(CPack)

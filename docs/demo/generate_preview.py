@@ -92,7 +92,7 @@ icon_data = 'data:image/png;base64,' + base64.b64encode(png).decode()
 
 html = (root/'src/app/ui/index.html').read_text()
 html = html.replace('<!-- STYLE -->','<style>'+(root/'src/app/ui/style.css').read_text()+'</style>')
-html = html.replace('<!-- BRAND_ICON -->',(root/'src/app/resources/remapcon.svg').read_text())
+html = html.replace('<!-- BRAND_ICON -->',(root/'src/app/resources/padmux.svg').read_text())
 bridge = '''<script>
 window.chrome = window.chrome || {};
 const demoState = DATA;

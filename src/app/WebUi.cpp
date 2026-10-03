@@ -15,7 +15,7 @@ bool WebUi::Open(HWND window, MessageHandler handler) {
     if (FAILED(SHGetFolderPathW(nullptr, CSIDL_LOCAL_APPDATA, nullptr,
                                 SHGFP_TYPE_CURRENT, localApp))) return false;
     const std::wstring dataDir = std::wstring(localApp) +
-        L"\\Remapcon\\WebView2";
+        L"\\PadMux\\WebView2";
     using namespace Microsoft::WRL;
     const HRESULT result = CreateCoreWebView2EnvironmentWithOptions(
         nullptr, dataDir.c_str(), nullptr,

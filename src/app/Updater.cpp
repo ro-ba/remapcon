@@ -28,7 +28,7 @@ struct InternetHandle {
 
 bool Fetch(const std::wstring& host, const std::wstring& path, size_t limit,
            std::vector<unsigned char>& output) {
-    InternetHandle session(WinHttpOpen(L"Remapcon-Updater/1.0",
+    InternetHandle session(WinHttpOpen(L"PadMux-Updater/1.0",
         WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY, WINHTTP_NO_PROXY_NAME,
         WINHTTP_NO_PROXY_BYPASS, 0));
     if (!session.value || !WinHttpSetTimeouts(session.value, 5000, 5000, 15000, 15000))
@@ -87,7 +87,7 @@ bool ReleaseDigest(const std::vector<unsigned char>& bytes,
         const auto* name = asset.Get(L"name");
         const auto* hash = asset.Get(L"digest");
         if (!name || name->type != simple_json::Value::Type::String ||
-            name->string != L"Remapcon-Windows-x64.zip") continue;
+            name->string != L"padmux-windows-x64.zip") continue;
         if (!hash || hash->type != simple_json::Value::Type::String ||
             hash->string.size() != 71 || hash->string.substr(0, 7) != L"sha256:")
             return false;
@@ -168,18 +168,18 @@ bool Extract(const fs::path& archive, const fs::path& destination) {
 bool ApplyPackage(const fs::path& package, const fs::path& install,
                   const fs::path& temporary) {
     constexpr std::array<const wchar_t*, 8> Files = {
-        L"Remapcon.exe", L"RemapconUpdater.exe", L"LICENSE", L"README.md",
+        L"padmux.exe", L"padmux-updater.exe", L"LICENSE", L"README.md",
         L"README.ja.md", L"THIRD_PARTY_NOTICES.md", L"LICENSES/WebView2-LICENSE.txt",
         L"LICENSES/WebView2-NOTICE.txt"
     };
     const fs::path backup = temporary / L"previous.exe";
-    if (!CopyFileW((install / L"Remapcon.exe").c_str(), backup.c_str(), TRUE))
+    if (!CopyFileW((install / L"padmux.exe").c_str(), backup.c_str(), TRUE))
         return false;
     std::vector<fs::path> staged;
     for (const wchar_t* name : Files) {
         const fs::path source = package / name;
         const fs::path target = install / name;
-        const fs::path next = target.wstring() + L".remapcon-new";
+        const fs::path next = target.wstring() + L".padmux-new";
         std::error_code error;
         fs::create_directories(target.parent_path(), error);
         DeleteFileW(next.c_str());
@@ -194,7 +194,7 @@ bool ApplyPackage(const fs::path& package, const fs::path& install,
         const fs::path target = install / Files[i];
         if (!MoveFileExW(staged[i].c_str(), target.c_str(), MOVEFILE_REPLACE_EXISTING)) {
             for (size_t j = i; j < staged.size(); ++j) DeleteFileW(staged[j].c_str());
-            CopyFileW(backup.c_str(), (install / L"Remapcon.exe").c_str(), FALSE);
+            CopyFileW(backup.c_str(), (install / L"padmux.exe").c_str(), FALSE);
             return false;
         }
     }
@@ -202,7 +202,7 @@ bool ApplyPackage(const fs::path& package, const fs::path& install,
 }
 
 void NotifyFailure(HWND window, UpdateFailure reason) {
-    if (IsWindow(window)) PostMessageW(window, WM_REMAPCON_UPDATE_FAILED,
+    if (IsWindow(window)) PostMessageW(window, WM_PADMUX_UPDATE_FAILED,
                                        static_cast<WPARAM>(reason), 0);
 }
 
@@ -217,13 +217,13 @@ int VerifyArchive(const fs::path& archive, const std::string& expected) {
                     static_cast<std::streamsize>(bytes.size()))) return 2;
     std::string actual;
     if (!Sha256(bytes, actual) || actual != expected) return 2;
-    const fs::path destination = archive.parent_path() / L"remapcon-verify-extracted";
+    const fs::path destination = archive.parent_path() / L"padmux-verify-extracted";
     fs::create_directories(destination, error);
     if (error) return 3;
     const bool extracted = Extract(archive, destination);
     const bool okay = extracted &&
-        fs::is_regular_file(destination / L"Remapcon-Windows-x64" / L"Remapcon.exe", error) &&
-        fs::is_regular_file(destination / L"Remapcon-Windows-x64" / L"RemapconUpdater.exe", error);
+        fs::is_regular_file(destination / L"padmux-windows-x64" / L"padmux.exe", error) &&
+        fs::is_regular_file(destination / L"padmux-windows-x64" / L"padmux-updater.exe", error);
     fs::remove_all(destination, error);
     return okay ? 0 : extracted ? 4 : 3;
 }
@@ -266,7 +266,7 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
     if (!parent) return 1;
 
     std::vector<unsigned char> release;
-    if (!Fetch(L"api.github.com", L"/repos/ro-ba/remapcon/releases/latest",
+    if (!Fetch(L"api.github.com", L"/repos/ro-ba/padmux/releases/latest",
                MaxReleaseJson, release)) {
         NotifyFailure(window, UpdateFailure::Network); CloseHandle(parent); return 1;
     }
@@ -275,8 +275,8 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
         NotifyFailure(window, UpdateFailure::Release); CloseHandle(parent); return 1;
     }
     std::vector<unsigned char> package;
-    if (!Fetch(L"github.com", L"/ro-ba/remapcon/releases/download/" + tag +
-               L"/Remapcon-Windows-x64.zip", MaxPackage, package)) {
+    if (!Fetch(L"github.com", L"/ro-ba/padmux/releases/download/" + tag +
+               L"/padmux-windows-x64.zip", MaxPackage, package)) {
         NotifyFailure(window, UpdateFailure::Download); CloseHandle(parent); return 1;
     }
     std::string actual;
@@ -290,29 +290,29 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
         !Extract(archive, temporary / L"extracted")) {
         NotifyFailure(window, UpdateFailure::Extract); CloseHandle(parent); return 1;
     }
-    const fs::path extracted = temporary / L"extracted" / L"Remapcon-Windows-x64";
-    if (!fs::is_regular_file(extracted / L"Remapcon.exe") ||
-        !fs::is_regular_file(extracted / L"RemapconUpdater.exe")) {
+    const fs::path extracted = temporary / L"extracted" / L"padmux-windows-x64";
+    if (!fs::is_regular_file(extracted / L"padmux.exe") ||
+        !fs::is_regular_file(extracted / L"padmux-updater.exe")) {
         NotifyFailure(window, UpdateFailure::Extract); CloseHandle(parent); return 1;
     }
     DWORD_PTR acknowledged = 0;
-    if (!SendMessageTimeoutW(window, WM_REMAPCON_UPDATE_READY, 0, 0,
+    if (!SendMessageTimeoutW(window, WM_PADMUX_UPDATE_READY, 0, 0,
         SMTO_ABORTIFHUNG | SMTO_BLOCK, 15000, &acknowledged) || acknowledged != 1 ||
         WaitForSingleObject(parent, 30000) != WAIT_OBJECT_0) {
         CloseHandle(parent); return 1;
     }
     CloseHandle(parent);
     if (!ApplyPackage(extracted, install, temporary)) {
-        MessageBoxW(nullptr, L"更新ファイルを配置できませんでした。Remapcon.exeを手動で起動してください。",
-            L"Remapconの更新に失敗", MB_OK | MB_ICONERROR);
+        MessageBoxW(nullptr, L"更新ファイルを配置できませんでした。padmux.exeを手動で起動してください。",
+            L"PadMuxの更新に失敗", MB_OK | MB_ICONERROR);
         return 1;
     }
-    const fs::path executable = install / L"Remapcon.exe";
+    const fs::path executable = install / L"padmux.exe";
     const auto result = ShellExecuteW(nullptr, L"open", executable.c_str(),
                                       nullptr, install.c_str(), SW_SHOWNORMAL);
     if (reinterpret_cast<INT_PTR>(result) <= 32) {
-        MessageBoxW(nullptr, L"更新は完了しましたが、再起動できませんでした。Remapcon.exeを手動で起動してください。",
-            L"Remapconを起動できません", MB_OK | MB_ICONWARNING);
+        MessageBoxW(nullptr, L"更新は完了しましたが、再起動できませんでした。padmux.exeを手動で起動してください。",
+            L"PadMuxを起動できません", MB_OK | MB_ICONWARNING);
         return 1;
     }
     return 0;

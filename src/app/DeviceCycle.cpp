@@ -11,6 +11,8 @@
 
 namespace {
 
+// Legacy registry/mutex identity is shared with Remapcon so an interrupted
+// device disable can still be recovered after upgrading to PadMux.
 constexpr wchar_t PendingKey[] = L"SOFTWARE\\Remapcon\\PendingDeviceCycle";
 
 bool ChangeState(HDEVINFO devices, SP_DEVINFO_DATA& device, DWORD change, DWORD scope) {

@@ -1,7 +1,7 @@
 #include "resource.h"
 #include <winver.h>
 
-IDI_REMAPCON ICON "remapcon.ico"
+IDI_PADMUX ICON "padmux.ico"
 
 VS_VERSION_INFO VERSIONINFO
  FILEVERSION 1,7,0,0
@@ -16,11 +16,11 @@ BEGIN
     BEGIN
         BLOCK "040904b0"
         BEGIN
-            VALUE "FileDescription", "Remapcon - Controller Mapping"
+            VALUE "FileDescription", "PadMux - Controller Mapping"
             VALUE "FileVersion", "1.7.0"
-            VALUE "InternalName", "Remapcon"
-            VALUE "OriginalFilename", "Remapcon.exe"
-            VALUE "ProductName", "Remapcon - Controller Mapping"
+            VALUE "InternalName", "PadMux"
+            VALUE "OriginalFilename", "padmux.exe"
+            VALUE "ProductName", "PadMux"
             VALUE "ProductVersion", "1.7.0"
         END
     END

@@ -1185,7 +1185,7 @@ std::wstring SettingsFile() {
     wchar_t directory[MAX_PATH]{};
     if (FAILED(SHGetFolderPathW(nullptr, CSIDL_LOCAL_APPDATA, nullptr,
                                 SHGFP_TYPE_CURRENT, directory))) return L"";
-    std::wstring folder = std::wstring(directory) + L"\\Remapcon";
+    std::wstring folder = std::wstring(directory) + L"\\PadMux";
     CreateDirectoryW(folder.c_str(), nullptr);
     return folder + L"\\ControllerSettings.json";
 }
@@ -2300,7 +2300,7 @@ void PickTargetExecutable(HWND window) {
 }
 
 void ExportSettings(HWND window) {
-    wchar_t path[MAX_PATH * 2] = L"Remapcon-settings.json";
+    wchar_t path[MAX_PATH * 2] = L"padmux-settings.json";
     if (!ChooseFile(window, true, L"設定をエクスポート",
                     L"JSON 設定 (*.json)\0*.json\0\0", path)) return;
     if (!SavePresets() ||
@@ -2388,7 +2388,7 @@ bool StartUpdate(const std::wstring& tag);
 #include "WebBridge.inc"
 
 bool CanWriteDirectory(const std::filesystem::path& directory) {
-    const auto probe = directory / (L".remapcon-update-" + std::to_wstring(GetCurrentProcessId()));
+    const auto probe = directory / (L".padmux-update-" + std::to_wstring(GetCurrentProcessId()));
     HANDLE file = CreateFileW(probe.c_str(), GENERIC_WRITE | DELETE, 0, nullptr, CREATE_NEW,
         FILE_ATTRIBUTE_TEMPORARY | FILE_FLAG_DELETE_ON_CLOSE, nullptr);
     if (file == INVALID_HANDLE_VALUE) return false;
@@ -2406,11 +2406,11 @@ bool StartUpdate(const std::wstring& tag) {
     const DWORD tempLength = GetTempPathW(MAX_PATH, tempRoot);
     if (!tempLength || tempLength >= MAX_PATH) return false;
     wchar_t tempName[MAX_PATH]{};
-    if (!GetTempFileNameW(tempRoot, L"rmu", 0, tempName) ||
+    if (!GetTempFileNameW(tempRoot, L"pmu", 0, tempName) ||
         !DeleteFileW(tempName) || !CreateDirectoryW(tempName, nullptr)) return false;
     const std::filesystem::path temporary(tempName);
-    const auto updater = temporary / L"RemapconUpdater.exe";
-    if (!CopyFileW((install / L"RemapconUpdater.exe").c_str(), updater.c_str(), TRUE)) {
+    const auto updater = temporary / L"padmux-updater.exe";
+    if (!CopyFileW((install / L"padmux-updater.exe").c_str(), updater.c_str(), TRUE)) {
         RemoveDirectoryW(temporary.c_str());
         return false;
     }
@@ -2449,9 +2449,9 @@ bool AddTrayIcon(HWND window) {
     data.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
     data.uCallbackMessage = WM_TRAY_ICON;
     data.hIcon = static_cast<HICON>(LoadImageW(GetModuleHandleW(nullptr),
-        MAKEINTRESOURCEW(IDI_REMAPCON), IMAGE_ICON,
+        MAKEINTRESOURCEW(IDI_PADMUX), IMAGE_ICON,
         GetSystemMetrics(SM_CXSMICON), GetSystemMetrics(SM_CYSMICON), LR_SHARED));
-    wcscpy_s(data.szTip, L"Remapcon — Steam Controller 2026 compatible");
+    wcscpy_s(data.szTip, L"PadMux — Steam Controller 2026 compatible");
     trayIconAdded = Shell_NotifyIconW(NIM_ADD, &data) != FALSE;
     return trayIconAdded;
 }
@@ -2507,8 +2507,8 @@ void ShowTrayMenu(HWND window) {
     HMENU menu = CreatePopupMenu();
     if (!menu) return;
     AppendMenuW(menu, MF_STRING, ID_TRAY_SHOW,
-                language == L"en" ? L"Open Remapcon" :
-                                    L"Remapconを開く");
+                language == L"en" ? L"Open PadMux" :
+                                    L"PadMuxを開く");
     AppendMenuW(menu, MF_STRING, ID_TRAY_EXIT, language == L"en" ? L"Exit" : L"終了");
     POINT cursor{};
     GetCursorPos(&cursor);
@@ -2598,12 +2598,12 @@ LRESULT CALLBACK MainProc(HWND window, UINT message, WPARAM wParam, LPARAM lPara
         webUi.SendJson(L"{\"type\":\"status\",\"text\":" +
                        JsonString(reinterpret_cast<const wchar_t*>(lParam)) + L"}");
         return 0;
-    case WM_REMAPCON_UPDATE_FAILED:
+    case WM_PADMUX_UPDATE_FAILED:
         updateInProgress = false;
         if (webReady) webUi.SendJson(L"{\"type\":\"updateInstallError\",\"code\":" +
                                    std::to_wstring(wParam) + L"}");
         return 0;
-    case WM_REMAPCON_UPDATE_READY:
+    case WM_PADMUX_UPDATE_READY:
         if (!updateInProgress) return 0;
         ForceExit(window);
         return 1;
@@ -2693,6 +2693,8 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show) {
     const int deviceCycleResult = RunDeviceCycleCommand();
     if (deviceCycleResult >= 0) return deviceCycleResult;
     processElevated = IsProcessElevated();
+    // Keep the legacy mutex/window class so PadMux and old Remapcon cannot
+    // acquire the same controller concurrently; numeric IPC is unchanged.
     HANDLE singleInstance = CreateMutexW(nullptr, TRUE, L"Remapcon_SingleInstance");
     if (!singleInstance || GetLastError() == ERROR_ALREADY_EXISTS) {
         HWND existing = nullptr;
@@ -2760,9 +2762,9 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show) {
     mainClass.hInstance = instance;
     mainClass.lpszClassName = L"RemapconMainWindow";
     mainClass.hCursor = LoadCursorW(nullptr, MAKEINTRESOURCEW(32512));
-    mainClass.hIcon = LoadIconW(instance, MAKEINTRESOURCEW(IDI_REMAPCON));
+    mainClass.hIcon = LoadIconW(instance, MAKEINTRESOURCEW(IDI_PADMUX));
     mainClass.hIconSm = static_cast<HICON>(LoadImageW(instance,
-        MAKEINTRESOURCEW(IDI_REMAPCON), IMAGE_ICON,
+        MAKEINTRESOURCEW(IDI_PADMUX), IMAGE_ICON,
         GetSystemMetrics(SM_CXSMICON), GetSystemMetrics(SM_CYSMICON), LR_SHARED));
     const HBRUSH darkBackground = CreateSolidBrush(RGB(27, 25, 34));
     mainClass.hbrBackground = darkBackground;
@@ -2774,7 +2776,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show) {
     GetMonitorInfoW(MonitorFromPoint(cursor, MONITOR_DEFAULTTOPRIMARY), &startMonitor);
     const RECT& work = startMonitor.rcWork;
     mainWindow = CreateWindowW(L"RemapconMainWindow",
-        L"Remapcon — Steam Controller 2026 compatible",
+        L"PadMux — Steam Controller 2026 compatible",
         WS_POPUP | WS_THICKFRAME | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX,
         work.left + 20, work.top + 20,
         (std::min)(1000L, work.right - work.left),

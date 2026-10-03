@@ -1,2 +1,2 @@
 #pragma once
-#define IDI_REMAPCON 101
+#define IDI_PADMUX 101
